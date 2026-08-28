@@ -15,7 +15,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import auth
+# settings 는 아래 설정값 변수(settings = get_settings())와 이름이 겹치므로 별칭을 씁니다
+from app.api import auth, projects
+from app.api import settings as settings_api
 from app.core.config import ROOT, get_settings
 
 log = logging.getLogger("bizdash")
@@ -52,6 +54,8 @@ if settings.cors_list:
     )
 
 app.include_router(auth.router)
+app.include_router(projects.router)
+app.include_router(settings_api.router)
 
 
 @app.get("/api/health")

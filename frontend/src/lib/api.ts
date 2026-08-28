@@ -36,6 +36,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
 }
 
+import type { AppSettings, ProjectDetail, ProjectSummary } from "./types";
+
 export interface SessionInfo {
   authenticated: boolean;
   using_default_password: boolean;
@@ -43,6 +45,9 @@ export interface SessionInfo {
 
 export const api = {
   session: () => request<SessionInfo>("/api/auth/session"),
+  projects: () => request<ProjectSummary[]>("/api/projects"),
+  project: (id: string) => request<ProjectDetail>(`/api/projects/${encodeURIComponent(id)}`),
+  settings: () => request<AppSettings>("/api/settings"),
   login: (password: string, remember: boolean) =>
     request<SessionInfo>("/api/auth/login", {
       method: "POST",
