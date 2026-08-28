@@ -1,0 +1,154 @@
+"""
+옮긴 로직이 프로토타입과 같은 값을 내는지 확인합니다.
+
+    .venv/bin/python scripts/verify/run.py
+"""
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+sys.path.insert(0, str(ROOT / "backend"))
+
+from app.core.calc import calc_actual, calc_planned, calc_status  # noqa: E402
+from app.core.config import KST                                    # noqa: E402
+from app.core.periods import period_of                             # noqa: E402
+from app.db.session import SessionLocal                            # noqa: E402
+from app.models import Project                                     # noqa: E402
+
+FAIL = False
+
+
+def node(script: str) -> str:
+    return subprocess.run(
+        ["node", str(HERE / script)], capture_output=True, text=True, check=True, cwd=HERE
+    ).stdout
+
+
+def head(title: str) -> None:
+    print("\n" + "=" * 66)
+    print(title)
+    print("=" * 66)
+
+
+def check(ok: bool, message: str) -> None:
+    global FAIL
+    if not ok:
+        FAIL = True
+    print(("  통과  " if ok else "  실패  ") + message)
+
+
+# ---------------------------------------------------------------- 회차 계산
+def verify_periods() -> None:
+    head("1. 회차 계산 — 주간·격주·월간 × 900일")
+    expected = node("js_periods.js").split("\n")
+
+    start = None
+    for p in SessionLocal().query(Project).all():
+        if p.id == "p1":
+            start = p.start
+    start = start or datetime(2026, 6, 1).date()
+
+    rows = []
+    base = datetime(2026, 1, 1).date()
+    for cycle in ["주간", "격주", "월간"]:
+        for i in range(900):
+            d = base + timedelta(days=i)
+            per = period_of(cycle, start, d)
+            rows.append(
+                "\t".join([cycle, d.isoformat(), per.key,
+                           per.start.isoformat(), per.end.isoformat(), per.label, per.full])
+            )
+
+    bad = [(a, b) for a, b in zip(expected, rows) if a != b]
+    check(not bad, f"{len(rows)}건 대조 — 불일치 {len(bad)}건")
+    for a, b in bad[:3]:
+        print(f"      프로토타입: {a}\n      이식본    : {b}")
+
+
+# ---------------------------------------------------------------- 대시보드 숫자
+def verify_dashboard() -> None:
+    head("2. 대시보드 숫자 — 진행률·상태·집행액·성과지표")
+    expected = json.loads(node("js_calc.js"))
+
+    db = SessionLocal()
+    for e in expected:
+        p = db.get(Project, e["id"])
+        if p is None:
+            check(False, f"{e['id']} 사업이 데이터베이스에 없습니다 (시드를 넣었나요?)")
+            continue
+
+        total, done = len(p.tasks), sum(1 for t in p.tasks if t.done)
+        actual = calc_actual(total, done)
+        planned = calc_planned(p.start, p.end)
+        open_issues = [x for x in p.entries if x.issue.strip() and not x.issue_done]
+        st = calc_status(actual, planned, bool(open_issues))
+        spent = sum(s.amount for x in p.entries for s in x.spends)
+
+        by_cat: dict[str, int] = {}
+        for x in p.entries:
+            for s in x.spends:
+                by_cat[s.category] = by_cat.get(s.category, 0) + s.amount
+
+        kpis = [
+            {
+                "name": k.name,
+                "value": sum(kv.value for x in p.entries for kv in x.kpi_values if kv.kpi_name == k.name),
+                "target": k.target,
+            }
+            for k in p.kpis
+        ]
+
+        got = {
+            "actual": actual, "planned": planned, "diff": actual - planned,
+            "status": st.label, "tasksDone": done, "tasksTotal": total,
+            "spent": spent, "left": max(0, p.budget - spent),
+            "openIssues": len(open_issues),
+            "kpis": kpis, "byCat": dict(sorted(by_cat.items())),
+        }
+        for key, mine in got.items():
+            check(expected_eq(e[key], mine), f"[{p.id}] {key}: {mine!r}")
+
+
+def expected_eq(a: object, b: object) -> bool:
+    return a == b
+
+
+# ---------------------------------------------------------------- 시간대
+def verify_timezone() -> None:
+    head("3. 시간대 — UTC(프로토타입) vs 한국시간(이식본)")
+    print("  프로토타입 JS 는 new Date(\"2026-06-01\") 을 UTC 자정으로 읽습니다.")
+    print("  이식본은 한국시간 자정으로 봅니다. 두 값이 얼마나 다른지 확인합니다.")
+
+    db = SessionLocal()
+    projs = {p.id: (p.start, p.end) for p in db.query(Project).all()}
+    lines = [l.split("\t") for l in node("js_planned.js").split("\n")]
+
+    diffs = []
+    for pid, i, v in lines:
+        if pid not in projs:
+            continue
+        s, e = projs[pid]
+        at = datetime(2026, 1, 1, 9, 0, 0, tzinfo=KST) + timedelta(days=int(i))
+        mine = calc_planned(s, e, at)
+        if mine != int(v):
+            diffs.append(abs(mine - int(v)))
+
+    pct = len(diffs) / max(1, len(lines)) * 100
+    biggest = max(diffs) if diffs else 0
+    print(f"\n  대조 {len(lines)}건 중 {len(diffs)}건({pct:.1f}%)이 다르고, 최대 차이는 {biggest}%p 입니다.")
+    check(biggest <= 1, f"차이는 최대 {biggest}%p 입니다 (2%p 이상이면 원인을 확인해야 합니다)")
+
+
+if __name__ == "__main__":
+    verify_periods()
+    verify_dashboard()
+    verify_timezone()
+    print("\n" + "=" * 66)
+    print("검증 실패 항목이 있습니다" if FAIL else "모든 검증을 통과했습니다")
+    sys.exit(1 if FAIL else 0)
