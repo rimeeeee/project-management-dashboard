@@ -1,8 +1,8 @@
 """표 만들기
 
-Revision ID: 22ca2bd6998f
+Revision ID: 3d729a105775
 Revises: 
-Create Date: 2026-08-28 13:37:52.630298
+Create Date: 2026-08-28 14:22:48.335698
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = '22ca2bd6998f'
+revision = '3d729a105775'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -36,7 +36,7 @@ def upgrade() -> None:
     sa.Column('collected_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_announcements'))
     )
     with op.batch_alter_table('announcements', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_announcements_due'), ['due'], unique=False)
@@ -50,7 +50,7 @@ def upgrade() -> None:
     sa.Column('value', sa.JSON(), nullable=False),
     sa.Column('updated_by', sa.String(length=60), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('key')
+    sa.PrimaryKeyConstraint('key', name=op.f('pk_app_settings'))
     )
     op.create_table('collector_runs',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -62,7 +62,7 @@ def upgrade() -> None:
     sa.Column('updated', sa.Integer(), nullable=False),
     sa.Column('total_seen', sa.Integer(), nullable=False),
     sa.Column('detail', sa.JSON(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_collector_runs'))
     )
     op.create_table('projects',
     sa.Column('id', sa.String(length=40), nullable=False),
@@ -79,13 +79,13 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_by', sa.String(length=60), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_projects'))
     )
     op.create_table('announcement_favorites',
     sa.Column('announcement_id', sa.String(length=40), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['announcement_id'], ['announcements.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('announcement_id')
+    sa.ForeignKeyConstraint(['announcement_id'], ['announcements.id'], name=op.f('fk_announcement_favorites_announcement_id_announcements'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('announcement_id', name=op.f('pk_announcement_favorites'))
     )
     op.create_table('project_categories',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -93,8 +93,8 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=80), nullable=False),
     sa.Column('budget_amount', sa.BigInteger(), nullable=False),
     sa.Column('sort_order', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], name=op.f('fk_project_categories_project_id_projects'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_project_categories')),
     sa.UniqueConstraint('project_id', 'name', name='uq_category_per_project')
     )
     with op.batch_alter_table('project_categories', schema=None) as batch_op:
@@ -107,8 +107,8 @@ def upgrade() -> None:
     sa.Column('unit', sa.String(length=20), nullable=False),
     sa.Column('target', sa.Integer(), nullable=False),
     sa.Column('sort_order', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], name=op.f('fk_project_kpis_project_id_projects'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_project_kpis')),
     sa.UniqueConstraint('project_id', 'name', name='uq_kpi_per_project')
     )
     with op.batch_alter_table('project_kpis', schema=None) as batch_op:
@@ -119,8 +119,8 @@ def upgrade() -> None:
     sa.Column('project_id', sa.String(length=40), nullable=False),
     sa.Column('stage_index', sa.Integer(), nullable=False),
     sa.Column('note', sa.Text(), nullable=False),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], name=op.f('fk_project_stage_notes_project_id_projects'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_project_stage_notes')),
     sa.UniqueConstraint('project_id', 'stage_index', name='uq_stage_note_per_project')
     )
     with op.batch_alter_table('project_stage_notes', schema=None) as batch_op:
@@ -132,8 +132,8 @@ def upgrade() -> None:
     sa.Column('name', sa.Text(), nullable=False),
     sa.Column('done', sa.Boolean(), nullable=False),
     sa.Column('sort_order', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], name=op.f('fk_project_tasks_project_id_projects'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_project_tasks'))
     )
     with op.batch_alter_table('project_tasks', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_project_tasks_project_id'), ['project_id'], unique=False)
@@ -147,8 +147,8 @@ def upgrade() -> None:
     sa.Column('sort_order', sa.Integer(), nullable=False),
     sa.Column('created_by', sa.String(length=60), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], name=op.f('fk_project_todos_project_id_projects'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_project_todos'))
     )
     with op.batch_alter_table('project_todos', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_project_todos_project_id'), ['project_id'], unique=False)
@@ -167,8 +167,8 @@ def upgrade() -> None:
     sa.Column('updated_by', sa.String(length=60), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('version', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], name=op.f('fk_report_entries_project_id_projects'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_report_entries')),
     sa.UniqueConstraint('project_id', 'period_key', name='uq_entry_per_period')
     )
     with op.batch_alter_table('report_entries', schema=None) as batch_op:
@@ -179,8 +179,8 @@ def upgrade() -> None:
     sa.Column('entry_id', sa.Integer(), nullable=False),
     sa.Column('kpi_name', sa.String(length=200), nullable=False),
     sa.Column('value', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['entry_id'], ['report_entries.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
+    sa.ForeignKeyConstraint(['entry_id'], ['report_entries.id'], name=op.f('fk_entry_kpi_values_entry_id_report_entries'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_entry_kpi_values')),
     sa.UniqueConstraint('entry_id', 'kpi_name', name='uq_kpi_value_per_entry')
     )
     with op.batch_alter_table('entry_kpi_values', schema=None) as batch_op:
@@ -188,17 +188,20 @@ def upgrade() -> None:
 
     op.create_table('entry_revisions',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('entry_id', sa.Integer(), nullable=False),
+    sa.Column('entry_id', sa.Integer(), nullable=True),
+    sa.Column('project_id', sa.String(length=40), nullable=False),
+    sa.Column('period_key', sa.String(length=20), nullable=False),
     sa.Column('revision_no', sa.Integer(), nullable=False),
+    sa.Column('action', sa.String(length=10), nullable=False),
     sa.Column('snapshot', sa.JSON(), nullable=False),
     sa.Column('changed_by', sa.String(length=60), nullable=False),
     sa.Column('changed_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['entry_id'], ['report_entries.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('entry_id', 'revision_no', name='uq_revision_per_entry')
+    sa.ForeignKeyConstraint(['entry_id'], ['report_entries.id'], name=op.f('fk_entry_revisions_entry_id_report_entries'), ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_entry_revisions'))
     )
     with op.batch_alter_table('entry_revisions', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_entry_revisions_entry_id'), ['entry_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_entry_revisions_project_id'), ['project_id'], unique=False)
 
     op.create_table('entry_spends',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -206,8 +209,8 @@ def upgrade() -> None:
     sa.Column('category', sa.String(length=80), nullable=False),
     sa.Column('amount', sa.BigInteger(), nullable=False),
     sa.Column('sort_order', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['entry_id'], ['report_entries.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['entry_id'], ['report_entries.id'], name=op.f('fk_entry_spends_entry_id_report_entries'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_entry_spends'))
     )
     with op.batch_alter_table('entry_spends', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_entry_spends_entry_id'), ['entry_id'], unique=False)
@@ -222,6 +225,7 @@ def downgrade() -> None:
 
     op.drop_table('entry_spends')
     with op.batch_alter_table('entry_revisions', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_entry_revisions_project_id'))
         batch_op.drop_index(batch_op.f('ix_entry_revisions_entry_id'))
 
     op.drop_table('entry_revisions')

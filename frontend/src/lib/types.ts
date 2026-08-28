@@ -96,3 +96,12 @@ export interface AppSettings {
   ann_filter: { include: string[]; ministries: string[]; amount: string };
   manual_url: { url: string };
 }
+
+export interface PeriodOption {
+  key: string;
+  label: string;
+  full: string;
+  date: string;
+  hasEntry: boolean;
+  version: number;
+}

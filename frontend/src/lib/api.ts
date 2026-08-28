@@ -9,17 +9,43 @@ export class ApiError extends Error {
   }
 }
 
+/* 저장 중 다른 사람이 먼저 저장한 경우.
+   조용히 덮어쓰지 않고 이 오류로 올려 보내 화면에서 사람이 정하게 합니다. */
+export interface ConflictInfo {
+  kind: "exists" | "conflict";
+  message: string;
+  who: string;
+  when: string;
+  current: Entry;
+}
+
+export class ConflictError extends Error {
+  info: ConflictInfo;
+  constructor(info: ConflictInfo) {
+    super(info.message);
+    this.info = info;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
+  // headers 는 따로 떼어 합칩니다.
+  // ...init 을 headers 뒤에 두면 init.headers 가 Content-Type 을 통째로 지워
+  // 서버가 본문을 읽지 못합니다(422). 실제로 그렇게 한 번 깨졌습니다.
+  const { headers: extra, ...rest } = init ?? {};
   try {
     res = await fetch(path, {
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      ...init,
+      ...rest,
+      headers: { "Content-Type": "application/json", ...(extra as Record<string, string>) },
     });
   } catch {
     // 서버가 꺼져 있거나 네트워크가 끊긴 경우
     throw new ApiError(0, "서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.");
+  }
+
+  if (res.status === 409) {
+    throw new ConflictError((await res.json()) as ConflictInfo);
   }
 
   if (!res.ok) {
@@ -36,7 +62,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
 }
 
-import type { AppSettings, ProjectDetail, ProjectSummary } from "./types";
+import type { AppSettings, Entry, PeriodOption, ProjectDetail, ProjectSummary } from "./types";
+import { whoHeader } from "./whoami";
 
 export interface SessionInfo {
   authenticated: boolean;
@@ -48,6 +75,56 @@ export const api = {
   projects: () => request<ProjectSummary[]>("/api/projects"),
   project: (id: string) => request<ProjectDetail>(`/api/projects/${encodeURIComponent(id)}`),
   settings: () => request<AppSettings>("/api/settings"),
+
+  // ---- 보고 회차 ----
+  periods: (pid: string) =>
+    request<PeriodOption[]>(`/api/projects/${encodeURIComponent(pid)}/periods`),
+
+  saveEntry: (pid: string, periodKey: string, who: string, payload: SaveEntryBody) =>
+    request<{ entry: Entry; project: ProjectDetail }>(
+      `/api/projects/${encodeURIComponent(pid)}/entries/${encodeURIComponent(periodKey)}`,
+      { method: "PUT", headers: whoHeader(who), body: JSON.stringify(payload) }
+    ),
+
+  deleteEntry: (pid: string, periodKey: string, who: string) =>
+    request<{ project: ProjectDetail }>(
+      `/api/projects/${encodeURIComponent(pid)}/entries/${encodeURIComponent(periodKey)}`,
+      { method: "DELETE", headers: whoHeader(who) }
+    ),
+
+  toggleIssue: (pid: string, periodKey: string, who: string) =>
+    request<{ project: ProjectDetail }>(
+      `/api/projects/${encodeURIComponent(pid)}/entries/${encodeURIComponent(periodKey)}/issue-toggle`,
+      { method: "POST", headers: whoHeader(who) }
+    ),
+
+  // ---- 입력 패널에서 바로 저장되는 것들 ----
+  setStage: (pid: string, stage: number, who: string) =>
+    request<ProjectDetail>(`/api/projects/${encodeURIComponent(pid)}/stage`,
+      { method: "PATCH", headers: whoHeader(who), body: JSON.stringify({ stage }) }),
+
+  setStageNote: (pid: string, index: number, note: string, who: string) =>
+    request<ProjectDetail>(`/api/projects/${encodeURIComponent(pid)}/stage-note`,
+      { method: "PATCH", headers: whoHeader(who), body: JSON.stringify({ index, note }) }),
+
+  setTask: (pid: string, index: number, done: boolean, who: string) =>
+    request<ProjectDetail>(`/api/projects/${encodeURIComponent(pid)}/task`,
+      { method: "PATCH", headers: whoHeader(who), body: JSON.stringify({ index, done }) }),
+
+  // ---- 할 일 ----
+  addTodo: (pid: string, text: string, due: string, who: string) =>
+    request<ProjectDetail>(`/api/projects/${encodeURIComponent(pid)}/todos`,
+      { method: "POST", headers: whoHeader(who), body: JSON.stringify({ text, due }) }),
+
+  toggleTodo: (pid: string, todoId: string, who: string) =>
+    request<ProjectDetail>(
+      `/api/projects/${encodeURIComponent(pid)}/todos/${encodeURIComponent(todoId)}`,
+      { method: "PATCH", headers: whoHeader(who) }),
+
+  removeTodo: (pid: string, todoId: string, who: string) =>
+    request<ProjectDetail>(
+      `/api/projects/${encodeURIComponent(pid)}/todos/${encodeURIComponent(todoId)}`,
+      { method: "DELETE", headers: whoHeader(who) }),
   login: (password: string, remember: boolean) =>
     request<SessionInfo>("/api/auth/login", {
       method: "POST",
@@ -55,3 +132,12 @@ export const api = {
     }),
   logout: () => request<SessionInfo>("/api/auth/logout", { method: "POST" }),
 };
+
+export interface SaveEntryBody {
+  spends: { cat: string; amt: number }[];
+  kpi: Record<string, number>;
+  act: string;
+  issue: string;
+  plan: string;
+  baseVersion: number;
+}

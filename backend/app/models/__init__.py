@@ -233,9 +233,14 @@ class ReportEntry(Base):
     kpi_values: Mapped[list["EntryKpiValue"]] = relationship(
         back_populates="entry", cascade="all, delete-orphan",
     )
+    # 이력은 회차를 지워도 남겨야 합니다.
+    # cascade="all, delete-orphan" 을 주면 SQLAlchemy 가 회차를 지울 때 이력까지
+    # 함께 지워 버려서, 데이터베이스에 걸어 둔 ON DELETE SET NULL 이 소용없어집니다.
+    # passive_deletes=True 로 두어 데이터베이스가 정한 대로(entry_id 만 비우기) 맡깁니다.
     revisions: Mapped[list["EntryRevision"]] = relationship(
-        back_populates="entry", cascade="all, delete-orphan",
+        back_populates="entry",
         order_by="EntryRevision.revision_no",
+        passive_deletes=True,
     )
 
 
@@ -281,27 +286,35 @@ class EntryKpiValue(Base):
 
 class EntryRevision(Base):
     """
-    회차를 수정하면 바뀌기 전 내용을 여기에 남깁니다.
+    회차가 바뀌거나 지워질 때 그 전 내용을 여기에 남깁니다.
 
     '누가 언제 무엇을 바꿨는지' 확인하려면 이전 내용이 남아 있어야 합니다.
     프로토타입은 덮어쓰기만 해서 이전 내용을 볼 방법이 없었습니다.
+
+    회차를 삭제해도 이 기록은 남습니다(entry_id 만 비워집니다).
+    삭제야말로 '누가 언제 지웠는지'가 가장 중요한 경우인데, 회차와 함께
+    지워지면 확인할 방법이 없어집니다. 그래서 사업 id·회차 키를 따로 담아
+    회차가 없어져도 어느 회차의 기록인지 알 수 있게 했습니다.
     """
 
     __tablename__ = "entry_revisions"
-    __table_args__ = (
-        UniqueConstraint("entry_id", "revision_no", name="uq_revision_per_entry"),
-    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    entry_id: Mapped[int] = mapped_column(
-        ForeignKey("report_entries.id", ondelete="CASCADE"), index=True
+    entry_id: Mapped[int | None] = mapped_column(
+        ForeignKey("report_entries.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # 회차가 지워져도 어느 사업 · 어느 회차였는지 남습니다
+    project_id: Mapped[str] = mapped_column(String(40), index=True)
+    period_key: Mapped[str] = mapped_column(String(20))
+
     revision_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    # update = 고침 / delete = 지움
+    action: Mapped[str] = mapped_column(String(10), default="update")
     snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)   # 바뀌기 전 내용
     changed_by: Mapped[str] = mapped_column(String(60), default="")
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
-    entry: Mapped[ReportEntry] = relationship(back_populates="revisions")
+    entry: Mapped[ReportEntry | None] = relationship(back_populates="revisions")
 
 
 # ---------------------------------------------------------------------

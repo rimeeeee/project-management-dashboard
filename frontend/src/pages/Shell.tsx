@@ -1,8 +1,10 @@
 /* 로그인 뒤 전체 화면 — 프로토타입의 go() / 화면 전환을 옮겼습니다. */
 import { useCallback, useEffect, useState } from "react";
 import Calendar, { calData } from "../components/Calendar";
+import Modal, { type ModalState } from "../components/Modal";
 import Sidebar, { type View } from "../components/Sidebar";
 import { api } from "../lib/api";
+import { getWhoami, setWhoami } from "../lib/whoami";
 import type { AppSettings, ProjectDetail, ProjectSummary } from "../lib/types";
 import Dashboard from "./Dashboard";
 import Home from "./Home";
@@ -26,6 +28,12 @@ export default function Shell({ usingDefaultPassword, onLogout }: Props) {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [full, setFull] = useState<FullCal | null>(null);
   const [error, setError] = useState("");
+  const [modal, setModal] = useState<ModalState | null>(null);
+  // 입력자 이름 — 계정을 두지 않기로 해서 직접 적습니다.
+  // 한 번 적으면 이 브라우저에 기억됩니다.
+  const [who, setWho] = useState(() => getWhoami());
+  const [nameDraft, setNameDraft] = useState("");
+  const [askName, setAskName] = useState(false);
 
   // 첫 화면에 필요한 것을 한 번에 받아 둡니다.
   // 달력에 할 일 기한을 표시하려면 사업별 상세가 필요합니다.
@@ -56,6 +64,18 @@ export default function Shell({ usingDefaultPassword, onLogout }: Props) {
     setFull(null);
     window.scrollTo({ top: 0 });
   }, []);
+
+  const openModal = useCallback((msg: string, sub?: string, onOk?: () => void) => {
+    setModal({ msg, sub, onOk });
+  }, []);
+
+  function saveName() {
+    const v = nameDraft.trim();
+    if (!v) return;
+    setWhoami(v);
+    setWho(v);
+    setAskName(false);
+  }
 
   async function logout() {
     try { await api.logout(); } finally { onLogout(); }
@@ -111,8 +131,16 @@ export default function Shell({ usingDefaultPassword, onLogout }: Props) {
           <Dashboard
             p={detail}
             allProjects={projects}
+            who={who}
             onGo={(id) => go("dash", id)}
             onZoom={(scope, ym, picked) => setFull({ scope, ym, picked })}
+            onProjectChange={(next) => {
+              setDetails((d) => ({ ...d, [next.id]: next }));
+              // 왼쪽 목록의 상태 점과 전체 현황도 함께 갱신합니다
+              setProjects((list) => list.map((x) => (x.id === next.id ? { ...x, ...next } : x)));
+            }}
+            onModal={openModal}
+            onNeedName={() => { setNameDraft(who); setAskName(true); }}
           />
         ) : (
           <section className="view on"><div className="empty">사업을 불러오는 중입니다.</div></section>
@@ -131,10 +159,39 @@ export default function Shell({ usingDefaultPassword, onLogout }: Props) {
           </section>
         )}
 
-        <div style={{ marginTop: 24, paddingBottom: 24 }}>
+        <div style={{ marginTop: 24, paddingBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: "14.4px", color: "var(--muted)" }}>
+            입력자 {who ? <b style={{ color: "var(--ink-2)" }}>{who}</b> : "미지정"}
+          </span>
+          <button type="button" className="mini-btn"
+                  onClick={() => { setNameDraft(who); setAskName(true); }}>이름 변경</button>
           <button type="button" className="btn-ghost" onClick={logout}>로그아웃</button>
         </div>
       </main>
+
+      {/* 입력자 이름 — 저장할 때 누가 입력했는지 남기려면 필요합니다 */}
+      {askName && (
+        <div className="scrim on" role="dialog" aria-modal="true">
+          <form className="modal form" style={{ maxWidth: 420 }}
+                onSubmit={(e) => { e.preventDefault(); saveName(); }}>
+            <h3>입력자 이름</h3>
+            <p style={{ fontSize: "14.4px", color: "var(--ink-2)", marginBottom: 12 }}>
+              입력한 내용에 누가 언제 넣었는지 함께 남깁니다.
+              한 번 적으면 이 브라우저에 기억됩니다.
+            </p>
+            <div className="f">
+              <input autoFocus value={nameDraft} onChange={(e) => setNameDraft(e.target.value)}
+                     placeholder="예: 김담당" />
+            </div>
+            <div className="acts" style={{ marginTop: 16 }}>
+              <button type="button" className="no" onClick={() => setAskName(false)}>취소</button>
+              <button type="submit" className="ok">저장</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <Modal state={modal} onClose={() => setModal(null)} />
 
       {/* 달력 크게 보기 */}
       {full && fullData && (

@@ -14,6 +14,7 @@ from typing import Any
 
 from app.core import calc
 from app.core.config import KST
+from app.core.timeutil import kst_iso
 from app.core.periods import cycle_word, period_of
 from app.models import Project, ReportEntry
 
@@ -126,7 +127,7 @@ def _entry_out(p: Project, e: ReportEntry) -> dict[str, Any]:
         "issueDone": e.issue_done,
         "enteredBy": e.entered_by,
         "updatedBy": e.updated_by,
-        "updatedAt": e.updated_at.astimezone(KST).isoformat() if e.updated_at else "",
+        "updatedAt": kst_iso(e.updated_at),
         "version": e.version,
     }
 

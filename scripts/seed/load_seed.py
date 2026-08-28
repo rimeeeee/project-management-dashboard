@@ -29,6 +29,7 @@ from app.core.periods import period_of                      # noqa: E402
 from app.db.session import SessionLocal                      # noqa: E402
 from app.models import (                                     # noqa: E402
     Announcement,
+    EntryRevision,
     AppSetting,
     Project,
     ProjectCategory,
@@ -72,6 +73,9 @@ def load(reset: bool) -> int:
                 db.delete(p)
             db.query(Announcement).delete()
             db.query(AppSetting).delete()
+            # 이력은 회차를 지워도 남도록 만들어 두었습니다(감사 기록).
+            # 시드를 다시 넣을 때는 예전 시험 기록이 섞이면 헷갈리므로 함께 지웁니다.
+            db.query(EntryRevision).delete()
             db.commit()
             print("기존 데이터를 지웠습니다.")
 

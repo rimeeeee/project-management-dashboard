@@ -1,15 +1,21 @@
 /* 사업 대시보드 — 프로토타입 renderDash() / renderHistory() / renderTodos() 를 옮겼습니다.
    4단계에서 입력 패널을 붙일 자리는 비워 두었습니다 (지금은 조회 전용). */
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Calendar, { calData } from "../components/Calendar";
+import InputPanel from "../components/InputPanel";
+import { api } from "../lib/api";
 import { clamp, daysBetween, dots, fmtEok, fmtWon, todayISO } from "../lib/format";
 import type { ProjectDetail, ProjectSummary } from "../lib/types";
 
 interface Props {
   p: ProjectDetail;
   allProjects: ProjectSummary[];
+  who: string;
   onGo: (projId: string) => void;
   onZoom: (scope: "dash", ym: Date, picked: string) => void;
+  onProjectChange: (p: ProjectDetail) => void;
+  onModal: (msg: string, sub?: string, onOk?: () => void) => void;
+  onNeedName: () => void;
 }
 
 const 폴더아이콘 = (
@@ -19,9 +25,57 @@ const 폴더아이콘 = (
   </svg>
 );
 
-export default function Dashboard({ p, allProjects, onGo, onZoom }: Props) {
+export default function Dashboard({
+  p, allProjects, who, onGo, onZoom, onProjectChange, onModal, onNeedName,
+}: Props) {
   const [ym, setYm] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [picked, setPicked] = useState("");
+  const [inputOpen, setInputOpen] = useState(false);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [todoText, setTodoText] = useState("");
+  const [todoDue, setTodoDue] = useState("");
+
+  // 이름을 아직 안 적었으면 먼저 물어봅니다
+  const needName = () => { onNeedName(); return false; };
+
+  async function run(fn: () => Promise<ProjectDetail>, msg?: string) {
+    if (!who && !needName()) return;
+    try {
+      onProjectChange(await fn());
+      if (msg) onModal(msg);
+    } catch (e) {
+      onModal(e instanceof Error ? e.message : "처리하지 못했습니다.");
+    }
+  }
+
+  function editEntry(pkey: string) {
+    setEditingKey(pkey);
+    setInputOpen(true);
+    setTimeout(() => document.getElementById("weeklyForm")
+      ?.scrollIntoView({ block: "start", behavior: "smooth" }), 50);
+  }
+
+  function deleteEntry(pkey: string) {
+    const e = p.entries.find((x) => x.periodKey === pkey);
+    if (!e) return;
+    onModal("이 회차 입력을 삭제할까요?",
+      e.periodLabel + " · 집행액과 성과 실적이 함께 제외됩니다.",
+      () => void run(async () => {
+        const r = await api.deleteEntry(p.id, pkey, who);
+        if (editingKey === pkey) setEditingKey(null);
+        return r.project;
+      }, "삭제되었습니다"));
+  }
+
+  function addTodo(ev: FormEvent) {
+    ev.preventDefault();
+    if (!todoText.trim()) return;
+    void run(async () => {
+      const r = await api.addTodo(p.id, todoText, todoDue, who);
+      setTodoText(""); setTodoDue("");
+      return r;
+    });
+  }
 
   const { events, runs } = calData([{ ...p, todos: p.todos }], allProjects);
 
@@ -60,7 +114,9 @@ export default function Dashboard({ p, allProjects, onGo, onZoom }: Props) {
     <div key={e.periodKey} className={"issue " + (e.issueDone ? "done" : "")}>
       <div className="ihead">
         <div className="t">{e.issue}</div>
-        <button type="button" className="mini-btn" disabled title="4단계에서 동작합니다">
+        <button type="button" className="mini-btn"
+                onClick={() => void run(async () =>
+                  (await api.toggleIssue(p.id, e.periodKey, who)).project)}>
           {e.issueDone ? "되돌리기" : "해결"}
         </button>
       </div>
@@ -85,14 +141,15 @@ export default function Dashboard({ p, allProjects, onGo, onZoom }: Props) {
           <span id="phPill" className={"pill " + p.status.key}><span id="phPillTxt">{p.status.label}</span></span>
           <button type="button" className="btn-ghost" style={{ padding: "7px 12px" }} disabled
                   title="5단계에서 동작합니다">사업 정보 수정</button>
-          <button type="button" className="btn-toggle" aria-pressed="false" disabled
-                  title="4단계에서 동작합니다">
+          <button type="button" className={"btn-toggle" + (inputOpen ? " on" : "")} id="inputToggle"
+                  aria-pressed={inputOpen}
+                  onClick={() => { setInputOpen(!inputOpen); if (inputOpen) setEditingKey(null); }}>
             <span className="sw" aria-hidden="true" /><span id="toggleLbl">{p.cycleWord} 입력</span>
           </button>
         </div>
       </div>
 
-      <div className="dash-wrap" id="dashWrap">
+      <div className={"dash-wrap" + (inputOpen ? " open" : "")} id="dashWrap">
         <div className="dash-grid">
 
           <div className="card span2">
@@ -246,13 +303,21 @@ export default function Dashboard({ p, allProjects, onGo, onZoom }: Props) {
             <h2>할 일 <span className="hint" id="todoHint">
               {p.todos.length ? `남은 일 ${남은할일}건 / 전체 ${p.todos.length}건` : ""}
             </span></h2>
+            <form className="todo-add" id="todoForm" onSubmit={addTodo}>
+              <input id="todoText" placeholder="할 일을 적어 주세요"
+                     value={todoText} onChange={(e) => setTodoText(e.target.value)} />
+              <input id="todoDue" type="date" aria-label="기한 (선택)"
+                     value={todoDue} onChange={(e) => setTodoDue(e.target.value)} />
+              <button type="submit" className="btn-add todo-btn">추가</button>
+            </form>
             <div id="todoList">
               {정렬된할일.length ? 정렬된할일.map((t) => {
                 const 남은일 = t.due ? daysBetween(todayISO(), t.due) : null;
                 const 급함 = !t.done && 남은일 !== null && 남은일 <= 3;
                 return (
                   <div key={t.id} className={"todo " + (t.done ? "done" : "")}>
-                    <input type="checkbox" checked={t.done} readOnly aria-label="완료 표시" />
+                    <input type="checkbox" checked={t.done} aria-label="완료 표시"
+                           onChange={() => void run(() => api.toggleTodo(p.id, t.id, who))} />
                     <div style={{ flex: 1 }}>
                       <div className="tx">{t.text}</div>
                       {t.due && (
@@ -263,6 +328,8 @@ export default function Dashboard({ p, allProjects, onGo, onZoom }: Props) {
                         </div>
                       )}
                     </div>
+                    <button type="button" className="rm" aria-label="할 일 삭제"
+                            onClick={() => void run(() => api.removeTodo(p.id, t.id, who))}>×</button>
                   </div>
                 );
               }) : <div className="empty">적어 둔 할 일이 없습니다.</div>}
@@ -315,8 +382,10 @@ export default function Dashboard({ p, allProjects, onGo, onZoom }: Props) {
                       ) : <span style={{ color: "var(--muted)" }}>없음</span>}
                     </td>
                     <td><div className="rowbtns">
-                      <button type="button" className="mini-btn" disabled title="4단계에서 동작합니다">수정</button>
-                      <button type="button" className="mini-btn danger" disabled title="4단계에서 동작합니다">삭제</button>
+                      <button type="button" className="mini-btn"
+                              onClick={() => editEntry(e.periodKey)}>수정</button>
+                      <button type="button" className="mini-btn danger"
+                              onClick={() => deleteEntry(e.periodKey)}>삭제</button>
                     </div></td>
                   </tr>
                 )) : (
@@ -347,6 +416,19 @@ export default function Dashboard({ p, allProjects, onGo, onZoom }: Props) {
             )}
           </div>
         </div>
+
+        <InputPanel
+          p={p}
+          who={who}
+          editingKey={editingKey}
+          onEditingKeyChange={setEditingKey}
+          onSaved={(next, msg, sub) => {
+            onProjectChange(next);
+            if (msg) { setInputOpen(false); onModal(msg, sub); }
+          }}
+          onConflict={(msg, sub, onOverwrite) => onModal(msg, sub, onOverwrite)}
+          onNeedName={onNeedName}
+        />
       </div>
     </section>
   );
