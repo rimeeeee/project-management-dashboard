@@ -8,3 +8,21 @@
 .cal-legend .row.runs .run-key{font-size:15.6px;color:var(--ink-2)}
 .cal-legend .row.runs .run-key i{width:18px;height:6px;border-radius:3px}
 .cal-legend .row.runs{gap:7px}
+
+/* 사업 등록·수정 화면 아래 버튼 세 개(저장 / 사업 삭제 / 취소)의 규격을 맞췄습니다.
+   프로토타입에서는 최소 너비(160 / 없음 / 90px), 글씨 크기(16.8 / 16.8 / 15px),
+   모서리(9 / 9 / 8px)가 제각각이었고, 저장만 테두리가 없어 2px 낮았습니다. */
+.reg-actions .btn-primary,
+.reg-actions .btn-danger,
+.reg-actions .btn-ghost{
+  min-width:150px;
+  padding:11px 16px;
+  border-radius:9px;
+  font-size:16.8px;
+  line-height:1.5;
+  /* 저장은 테두리가 없어 다른 둘보다 2px 낮습니다.
+     투명 테두리를 둘러 높이를 맞춥니다. */
+  border:1px solid transparent;
+}
+.reg-actions .btn-danger{border-color:var(--crit-ink)}
+.reg-actions .btn-ghost{border-color:var(--line-strong)}

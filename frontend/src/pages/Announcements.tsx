@@ -288,9 +288,8 @@ export default function Announcements({
             </div>
           </article>
         )) : (
-          <div className="empty">
-            {data ? "조건에 맞는 공고가 없습니다. 포함 키워드를 넓히거나 부처 선택을 해제해 보세요." : "불러오는 중입니다."}
-          </div>
+          // 공고가 없다는 안내는 위 건수 줄에 이미 있습니다. 여기서 또 적지 않습니다.
+          !data && <div className="empty">불러오는 중입니다.</div>
         )}
       </div>
 
