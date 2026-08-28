@@ -22,3 +22,5 @@ debug_*.xml
 
 # macOS
 .DS_Store
+tsconfig.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
