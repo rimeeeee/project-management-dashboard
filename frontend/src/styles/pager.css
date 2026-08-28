@@ -1,0 +1,29 @@
+/* 쪽 나누기 — 프로토타입에 없던 유일한 새 UI 입니다.
+   색·크기를 새로 정하지 않고 기존 변수와 .mini-btn/.tab 문법을 그대로 씁니다.
+   새 요소가 이질감을 만들면 안 됩니다. */
+
+.pager{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin:14px 0}
+.pager .pg{
+  min-width:42px;height:42px;padding:0 12px;
+  border:1px solid var(--line-strong);border-radius:9px;
+  font-size:15px;font-weight:500;color:var(--ink-2);
+  font-variant-numeric:tabular-nums;
+}
+.pager .pg:hover:not(:disabled){background:var(--surface-2)}
+.pager .pg:disabled{opacity:.4;cursor:default}
+.pager .pg.on{background:var(--accent);border-color:var(--accent);color:var(--btn-ink);font-weight:600}
+/* 건너뛴 쪽 표시 (…) */
+.pager .gap{color:var(--muted);padding:0 2px;font-size:15px}
+
+/* 건수 줄 — '1,240건 중 41 – 80번째' 와 쪽당 개수 고르기 */
+.ann-count{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ann-count .size{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:14.4px;color:var(--muted)}
+.ann-count .size select{width:auto;min-width:74px;padding:5px 8px}
+
+/* 수집 상태 줄 — 수집이 조용히 멈춰 있는 걸 모르는 게 제일 위험합니다 */
+.collect-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  font-size:14.4px;color:var(--ink-2);margin-bottom:12px}
+.collect-bar .dot{width:8px;height:8px;border-radius:50%;background:var(--good-dot)}
+.collect-bar .dot.stale{background:var(--warn-dot)}
+.collect-bar .dot.none{background:var(--crit-dot)}
+.collect-bar .spacer{margin-left:auto}

@@ -25,7 +25,7 @@ export class ConflictError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   // headers 는 따로 떼어 합칩니다.
   // ...init 을 headers 뒤에 두면 init.headers 가 Content-Type 을 통째로 지워

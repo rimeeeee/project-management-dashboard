@@ -8,6 +8,10 @@ import type { AppSettings, ProjectDetail, ProjectSummary } from "../lib/types";
 import Dashboard from "./Dashboard";
 import Home from "./Home";
 import Register from "./Register";
+import Announcements from "./Announcements";
+import AnnForm from "../components/AnnForm";
+import AnnImport from "../components/AnnImport";
+import type { Ann } from "../lib/annApi";
 
 interface Props {
   usingDefaultPassword: boolean;
@@ -31,6 +35,11 @@ export default function Shell({ usingDefaultPassword }: Props) {
   // 사업 정보 수정 모드로 들어왔는지 (null 이면 신규 등록)
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [manualDraft, setManualDraft] = useState<string | null>(null);
+  // 공고 화면 — 등록·수정 팝업과 불러오기 팝업, 그리고 목록 새로고침 신호
+  const [annForm, setAnnForm] = useState<{ ann: Ann | null } | null>(null);
+  const [annImport, setAnnImport] = useState(false);
+  const [annReload, setAnnReload] = useState(0);
+  const [annMinistries, setAnnMinistries] = useState<string[]>([]);
 
   // 첫 화면에 필요한 것을 한 번에 받아 둡니다.
   // 달력에 할 일 기한을 표시하려면 사업별 상세가 필요합니다.
@@ -166,13 +175,16 @@ export default function Shell({ usingDefaultPassword }: Props) {
           />
         )}
 
-        {view === "ann" && (
-          <section className="view on">
-            <div className="page-title">사업 현황 — 대외 공고</div>
-            <div className="card">
-              <p style={{ color: "var(--ink-2)" }}>공고 화면과 자동 수집은 6단계에서 붙입니다.</p>
-            </div>
-          </section>
+        {view === "ann" && settings && (
+          <Announcements
+            settings={settings}
+            onSettings={setSettings}
+            onModal={openModal}
+            onEditAnn={(a) => setAnnForm({ ann: a })}
+            onImport={() => setAnnImport(true)}
+            onFacets={setAnnMinistries}
+            reloadToken={annReload}
+          />
         )}
 
       </main>
@@ -207,6 +219,22 @@ export default function Shell({ usingDefaultPassword }: Props) {
             </div>
           </form>
         </div>
+      )}
+
+      {annForm && (
+        <AnnForm
+          ann={annForm.ann}
+          ministries={annMinistries}
+          onDone={() => { setAnnForm(null); setAnnReload((n) => n + 1); }}
+          onClose={() => setAnnForm(null)}
+        />
+      )}
+
+      {annImport && (
+        <AnnImport
+          onDone={(msg, sub) => { setAnnImport(false); setAnnReload((n) => n + 1); openModal(msg, sub); }}
+          onClose={() => setAnnImport(false)}
+        />
       )}
 
       <Modal state={modal} onClose={() => setModal(null)} />
