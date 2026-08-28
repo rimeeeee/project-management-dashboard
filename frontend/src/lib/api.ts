@@ -50,7 +50,10 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     let detail = `요청을 처리하지 못했습니다. (${res.status})`;
     try {
       const body = await res.json();
-      if (body?.detail) detail = String(body.detail);
+      // 서버 형식 검사(pydantic)가 거르면 detail 이 배열로 옵니다.
+      // 그대로 String() 하면 "[object Object]" 가 보이므로 사람이 읽을 말로 바꿉니다.
+      if (Array.isArray(body?.detail)) detail = "입력값 형식이 올바르지 않습니다. 숫자 칸에 숫자를 넣었는지 확인해 주세요.";
+      else if (body?.detail) detail = String(body.detail);
     } catch {
       /* 본문이 JSON 이 아닌 경우 — 위 기본 문구를 씁니다 */
     }

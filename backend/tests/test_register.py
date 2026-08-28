@@ -158,3 +158,10 @@ def test_매뉴얼_주소를_저장한다(client):
     r = client.patch("/api/settings/manual-url", json={"url": "www.notion.so/abc"})
     assert r.json()["url"] == "https://www.notion.so/abc"      # http 가 없으면 붙여 줍니다
     assert client.get("/api/settings").json()["manual_url"]["url"] == "https://www.notion.so/abc"
+
+
+def test_성과지표_목표는_소수점을_허용한다(client):
+    """'만족도 4.5점' 같은 목표가 실제로 있습니다. 프로토타입도 허용했습니다."""
+    r = client.post(P, json=payload(kpis=[{"name": "환자 만족도", "target": 4.5, "unit": "점"}]))
+    assert r.status_code == 200, r.text
+    assert r.json()["kpis"][0]["target"] == 4.5

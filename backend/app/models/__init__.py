@@ -19,6 +19,7 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -136,7 +137,9 @@ class ProjectKpi(Base):
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     unit: Mapped[str] = mapped_column(String(20), default="건")
-    target: Mapped[int] = mapped_column(Integer, default=0)
+    # 소수점을 허용합니다. '만족도 4.5점' 같은 목표가 실제로 있습니다.
+    # (프로토타입도 Number() 로 받아 소수점을 허용했습니다)
+    target: Mapped[float] = mapped_column(Float, default=0)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     project: Mapped[Project] = relationship(back_populates="kpis")
@@ -279,7 +282,7 @@ class EntryKpiValue(Base):
         ForeignKey("report_entries.id", ondelete="CASCADE"), index=True
     )
     kpi_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    value: Mapped[int] = mapped_column(Integer, default=0)
+    value: Mapped[float] = mapped_column(Float, default=0)   # 목표와 같은 이유로 소수점 허용
 
     entry: Mapped[ReportEntry] = relationship(back_populates="kpi_values")
 

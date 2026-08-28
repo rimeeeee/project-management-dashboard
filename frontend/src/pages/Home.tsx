@@ -1,7 +1,7 @@
 /* 전체 사업 현황 — 프로토타입 renderHome() 을 그대로 옮겼습니다. */
 import { useState } from "react";
 import Calendar, { calData } from "../components/Calendar";
-import { clamp, dots, fmtEok } from "../lib/format";
+import { clamp, dots, fmtEok, todayISO } from "../lib/format";
 import type { ProjectDetail, ProjectSummary } from "../lib/types";
 
 interface Props {
@@ -33,7 +33,8 @@ export default function Home({ projects, details, onGo, onZoom }: Props) {
     if (step === 0) {
       const t = new Date();
       setYm(new Date(t.getFullYear(), t.getMonth(), 1));
-      setPicked(new Date().toISOString().slice(0, 10));
+      // toISOString() 은 UTC 라 한국시간 자정~오전 9시 사이에 '어제'가 됩니다
+      setPicked(todayISO());
     } else {
       setYm(new Date(ym.getFullYear(), ym.getMonth() + step, 1));
       setPicked("");

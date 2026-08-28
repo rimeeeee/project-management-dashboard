@@ -193,3 +193,12 @@ def test_로그인하지_않으면_저장할_수_없다(db):
     anon = TestClient(app)
     r = anon.put(f"{P}/entries/{WEEK}", json=body(act="x"))
     assert r.status_code == 401
+
+
+def test_지표_실적도_소수점을_허용한다(client):
+    from tests.conftest import SessionLocal  # noqa: F401  (픽스처와 같은 DB)
+
+    # 사업 지표를 소수점 목표로 바꾸고, 실적도 소수점으로 넣어 봅니다
+    r = client.put(f"{P}/entries/{WEEK}", json=body(kpi={"논문": 0.5}))
+    assert r.status_code == 200, r.text
+    assert r.json()["entry"]["kpi"]["논문"] == 0.5

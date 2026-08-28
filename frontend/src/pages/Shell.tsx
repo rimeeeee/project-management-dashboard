@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Calendar, { calData } from "../components/Calendar";
 import Modal, { type ModalState } from "../components/Modal";
+import { todayISO } from "../lib/format";
 import Sidebar, { type View } from "../components/Sidebar";
 import { api } from "../lib/api";
 import type { AppSettings, ProjectDetail, ProjectSummary } from "../lib/types";
@@ -272,7 +273,8 @@ export default function Shell() {
               <button type="button" className="mini-btn cal-today"
                       onClick={() => { const t = new Date();
                         setFull({ ...full, ym: new Date(t.getFullYear(), t.getMonth(), 1),
-                                  picked: new Date().toISOString().slice(0, 10) }); }}>오늘</button>
+                                  // toISOString 은 UTC 라 새벽에 '어제'가 됩니다
+                                  picked: todayISO() }); }}>오늘</button>
             </div>
             <div className="cal-dow" aria-hidden="true">
               <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>

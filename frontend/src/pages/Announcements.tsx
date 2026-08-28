@@ -52,8 +52,12 @@ export default function Announcements({
   const [sort, setSort] = useState("due");
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(() => {
-    const v = Number(localStorage.getItem(SIZE_KEY));
-    return [20, 40, 60].includes(v) ? v : 40;
+    try {
+      const v = Number(localStorage.getItem(SIZE_KEY));
+      return [20, 40, 60].includes(v) ? v : 40;
+    } catch {
+      return 40;   // 프라이빗 모드 — 기본값으로 동작합니다
+    }
   });
   // 조건 입력칸은 타이핑 중일 수 있어 따로 들고 있다가 [적용]에서 넘깁니다
   const [includeText, setIncludeText] = useState(f.include.join(", "));
@@ -241,7 +245,8 @@ export default function Announcements({
         <span className="size">
           <label htmlFor="annSize">쪽당</label>
           <select id="annSize" value={size}
-                  onChange={(e) => { const v = Number(e.target.value); setSize(v); localStorage.setItem(SIZE_KEY, String(v)); }}>
+                  onChange={(e) => { const v = Number(e.target.value); setSize(v);
+                    try { localStorage.setItem(SIZE_KEY, String(v)); } catch { /* 프라이빗 모드 */ } }}>
             <option value={20}>20개</option>
             <option value={40}>40개</option>
             <option value={60}>60개</option>

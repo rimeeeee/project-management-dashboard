@@ -53,7 +53,7 @@ class SaveConflict(Exception):
 @dataclass
 class EntryInput:
     spends: list[dict[str, Any]]
-    kpi: dict[str, int]
+    kpi: dict[str, float]
     act: str
     issue: str
     plan: str
@@ -97,7 +97,7 @@ def _apply(db: Session, entry: ReportEntry, data: EntryInput) -> None:
     entry.kpi_values.clear()
     db.flush()
     for name, value in data.kpi.items():
-        entry.kpi_values.append(EntryKpiValue(kpi_name=name, value=int(value or 0)))
+        entry.kpi_values.append(EntryKpiValue(kpi_name=name, value=float(value or 0)))
 
 
 def save_entry(

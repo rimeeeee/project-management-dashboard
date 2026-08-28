@@ -68,7 +68,7 @@ class SpendIn(BaseModel):
 
 class EntryIn(BaseModel):
     spends: list[SpendIn] = Field(default_factory=list)
-    kpi: dict[str, int] = Field(default_factory=dict)
+    kpi: dict[str, float] = Field(default_factory=dict)
     act: str = ""
     issue: str = ""
     plan: str = ""

@@ -39,7 +39,7 @@ CYCLES = (WEEKLY, BIWEEKLY, MONTHLY)
 
 class KpiIn(BaseModel):
     name: str = ""
-    target: int = 0
+    target: float = 0
     unit: str = "건"
 
 
