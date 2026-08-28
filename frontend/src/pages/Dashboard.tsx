@@ -10,12 +10,11 @@ import type { ProjectDetail, ProjectSummary } from "../lib/types";
 interface Props {
   p: ProjectDetail;
   allProjects: ProjectSummary[];
-  who: string;
   onGo: (projId: string) => void;
   onZoom: (scope: "dash", ym: Date, picked: string) => void;
   onProjectChange: (p: ProjectDetail) => void;
   onModal: (msg: string, sub?: string, onOk?: () => void) => void;
-  onNeedName: () => void;
+  onEdit: () => void;
 }
 
 const 폴더아이콘 = (
@@ -26,7 +25,7 @@ const 폴더아이콘 = (
 );
 
 export default function Dashboard({
-  p, allProjects, who, onGo, onZoom, onProjectChange, onModal, onNeedName,
+  p, allProjects, onGo, onZoom, onProjectChange, onModal, onEdit,
 }: Props) {
   const [ym, setYm] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [picked, setPicked] = useState("");
@@ -35,11 +34,7 @@ export default function Dashboard({
   const [todoText, setTodoText] = useState("");
   const [todoDue, setTodoDue] = useState("");
 
-  // 이름을 아직 안 적었으면 먼저 물어봅니다
-  const needName = () => { onNeedName(); return false; };
-
   async function run(fn: () => Promise<ProjectDetail>, msg?: string) {
-    if (!who && !needName()) return;
     try {
       onProjectChange(await fn());
       if (msg) onModal(msg);
@@ -61,7 +56,7 @@ export default function Dashboard({
     onModal("이 회차 입력을 삭제할까요?",
       e.periodLabel + " · 집행액과 성과 실적이 함께 제외됩니다.",
       () => void run(async () => {
-        const r = await api.deleteEntry(p.id, pkey, who);
+        const r = await api.deleteEntry(p.id, pkey);
         if (editingKey === pkey) setEditingKey(null);
         return r.project;
       }, "삭제되었습니다"));
@@ -71,7 +66,7 @@ export default function Dashboard({
     ev.preventDefault();
     if (!todoText.trim()) return;
     void run(async () => {
-      const r = await api.addTodo(p.id, todoText, todoDue, who);
+      const r = await api.addTodo(p.id, todoText, todoDue);
       setTodoText(""); setTodoDue("");
       return r;
     });
@@ -116,7 +111,7 @@ export default function Dashboard({
         <div className="t">{e.issue}</div>
         <button type="button" className="mini-btn"
                 onClick={() => void run(async () =>
-                  (await api.toggleIssue(p.id, e.periodKey, who)).project)}>
+                  (await api.toggleIssue(p.id, e.periodKey)).project)}>
           {e.issueDone ? "되돌리기" : "해결"}
         </button>
       </div>
@@ -139,8 +134,8 @@ export default function Dashboard({
         </div>
         <div className="right">
           <span id="phPill" className={"pill " + p.status.key}><span id="phPillTxt">{p.status.label}</span></span>
-          <button type="button" className="btn-ghost" style={{ padding: "7px 12px" }} disabled
-                  title="5단계에서 동작합니다">사업 정보 수정</button>
+          <button type="button" className="btn-ghost" style={{ padding: "7px 12px" }}
+                  onClick={onEdit}>사업 정보 수정</button>
           <button type="button" className={"btn-toggle" + (inputOpen ? " on" : "")} id="inputToggle"
                   aria-pressed={inputOpen}
                   onClick={() => { setInputOpen(!inputOpen); if (inputOpen) setEditingKey(null); }}>
@@ -242,8 +237,8 @@ export default function Dashboard({
                             {fmtEok(잔액)}
                           </span>
                         ) : (
-                          <button type="button" className="v none link" disabled
-                                  title="배정액을 넣으면 남은 금액이 표시됩니다 (5단계)">배정액 입력</button>
+                          <button type="button" className="v none link" onClick={onEdit}
+                                  title="배정액을 넣으면 남은 금액이 표시됩니다">배정액 입력</button>
                         )}
                       </div>
                     );
@@ -317,7 +312,7 @@ export default function Dashboard({
                 return (
                   <div key={t.id} className={"todo " + (t.done ? "done" : "")}>
                     <input type="checkbox" checked={t.done} aria-label="완료 표시"
-                           onChange={() => void run(() => api.toggleTodo(p.id, t.id, who))} />
+                           onChange={() => void run(() => api.toggleTodo(p.id, t.id))} />
                     <div style={{ flex: 1 }}>
                       <div className="tx">{t.text}</div>
                       {t.due && (
@@ -329,7 +324,7 @@ export default function Dashboard({
                       )}
                     </div>
                     <button type="button" className="rm" aria-label="할 일 삭제"
-                            onClick={() => void run(() => api.removeTodo(p.id, t.id, who))}>×</button>
+                            onClick={() => void run(() => api.removeTodo(p.id, t.id))}>×</button>
                   </div>
                 );
               }) : <div className="empty">적어 둔 할 일이 없습니다.</div>}
@@ -398,7 +393,7 @@ export default function Dashboard({
           {/* 사업 관련 자료가 있는 공유폴더로 바로 가는 줄 */}
           <div className="span2 dash-foot" id="dashFoot">
             {!p.folderUrl ? (
-              <button type="button" className="folder-link off" disabled title="5단계에서 동작합니다">
+              <button type="button" className="folder-link off" onClick={onEdit}>
                 {폴더아이콘} 공유폴더 주소 등록
               </button>
             ) : 웹주소 ? (
@@ -419,7 +414,6 @@ export default function Dashboard({
 
         <InputPanel
           p={p}
-          who={who}
           editingKey={editingKey}
           onEditingKeyChange={setEditingKey}
           onSaved={(next, msg, sub) => {
@@ -427,7 +421,6 @@ export default function Dashboard({
             if (msg) { setInputOpen(false); onModal(msg, sub); }
           }}
           onConflict={(msg, sub, onOverwrite) => onModal(msg, sub, onOverwrite)}
-          onNeedName={onNeedName}
         />
       </div>
     </section>

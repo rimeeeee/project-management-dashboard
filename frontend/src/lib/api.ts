@@ -14,8 +14,6 @@ export class ApiError extends Error {
 export interface ConflictInfo {
   kind: "exists" | "conflict";
   message: string;
-  who: string;
-  when: string;
   current: Entry;
 }
 
@@ -63,7 +61,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 import type { AppSettings, Entry, PeriodOption, ProjectDetail, ProjectSummary } from "./types";
-import { whoHeader } from "./whoami";
 
 export interface SessionInfo {
   authenticated: boolean;
@@ -80,51 +77,67 @@ export const api = {
   periods: (pid: string) =>
     request<PeriodOption[]>(`/api/projects/${encodeURIComponent(pid)}/periods`),
 
-  saveEntry: (pid: string, periodKey: string, who: string, payload: SaveEntryBody) =>
+  saveEntry: (pid: string, periodKey: string, payload: SaveEntryBody) =>
     request<{ entry: Entry; project: ProjectDetail }>(
       `/api/projects/${encodeURIComponent(pid)}/entries/${encodeURIComponent(periodKey)}`,
-      { method: "PUT", headers: whoHeader(who), body: JSON.stringify(payload) }
+      { method: "PUT", body: JSON.stringify(payload) }
     ),
 
-  deleteEntry: (pid: string, periodKey: string, who: string) =>
+  deleteEntry: (pid: string, periodKey: string) =>
     request<{ project: ProjectDetail }>(
       `/api/projects/${encodeURIComponent(pid)}/entries/${encodeURIComponent(periodKey)}`,
-      { method: "DELETE", headers: whoHeader(who) }
+      { method: "DELETE" }
     ),
 
-  toggleIssue: (pid: string, periodKey: string, who: string) =>
+  toggleIssue: (pid: string, periodKey: string) =>
     request<{ project: ProjectDetail }>(
       `/api/projects/${encodeURIComponent(pid)}/entries/${encodeURIComponent(periodKey)}/issue-toggle`,
-      { method: "POST", headers: whoHeader(who) }
+      { method: "POST" }
     ),
 
   // ---- 입력 패널에서 바로 저장되는 것들 ----
-  setStage: (pid: string, stage: number, who: string) =>
+  setStage: (pid: string, stage: number) =>
     request<ProjectDetail>(`/api/projects/${encodeURIComponent(pid)}/stage`,
-      { method: "PATCH", headers: whoHeader(who), body: JSON.stringify({ stage }) }),
+      { method: "PATCH", body: JSON.stringify({ stage }) }),
 
-  setStageNote: (pid: string, index: number, note: string, who: string) =>
+  setStageNote: (pid: string, index: number, note: string) =>
     request<ProjectDetail>(`/api/projects/${encodeURIComponent(pid)}/stage-note`,
-      { method: "PATCH", headers: whoHeader(who), body: JSON.stringify({ index, note }) }),
+      { method: "PATCH", body: JSON.stringify({ index, note }) }),
 
-  setTask: (pid: string, index: number, done: boolean, who: string) =>
+  setTask: (pid: string, index: number, done: boolean) =>
     request<ProjectDetail>(`/api/projects/${encodeURIComponent(pid)}/task`,
-      { method: "PATCH", headers: whoHeader(who), body: JSON.stringify({ index, done }) }),
+      { method: "PATCH", body: JSON.stringify({ index, done }) }),
+
+  // ---- 사업 등록 · 수정 · 삭제 ----
+  createProject: (body: ProjectInput) =>
+    request<ProjectDetail>("/api/projects", { method: "POST", body: JSON.stringify(body) }),
+
+  updateProject: (id: string, body: ProjectInput) =>
+    request<ProjectDetail>(`/api/projects/${encodeURIComponent(id)}`,
+      { method: "PUT", body: JSON.stringify(body) }),
+
+  deleteProject: (id: string) =>
+    request<{ deleted: string; name: string }>(`/api/projects/${encodeURIComponent(id)}`,
+      { method: "DELETE" }),
+
+  setManualUrl: (url: string) =>
+    request<{ url: string }>("/api/settings/manual-url",
+      { method: "PATCH", body: JSON.stringify({ url }) }),
 
   // ---- 할 일 ----
-  addTodo: (pid: string, text: string, due: string, who: string) =>
+  addTodo: (pid: string, text: string, due: string) =>
     request<ProjectDetail>(`/api/projects/${encodeURIComponent(pid)}/todos`,
-      { method: "POST", headers: whoHeader(who), body: JSON.stringify({ text, due }) }),
+      { method: "POST", body: JSON.stringify({ text, due }) }),
 
-  toggleTodo: (pid: string, todoId: string, who: string) =>
+  toggleTodo: (pid: string, todoId: string) =>
     request<ProjectDetail>(
       `/api/projects/${encodeURIComponent(pid)}/todos/${encodeURIComponent(todoId)}`,
-      { method: "PATCH", headers: whoHeader(who) }),
+      { method: "PATCH" }),
 
-  removeTodo: (pid: string, todoId: string, who: string) =>
+  removeTodo: (pid: string, todoId: string) =>
     request<ProjectDetail>(
       `/api/projects/${encodeURIComponent(pid)}/todos/${encodeURIComponent(todoId)}`,
-      { method: "DELETE", headers: whoHeader(who) }),
+      { method: "DELETE" }),
   login: (password: string, remember: boolean) =>
     request<SessionInfo>("/api/auth/login", {
       method: "POST",
@@ -140,4 +153,17 @@ export interface SaveEntryBody {
   issue: string;
   plan: string;
   baseVersion: number;
+}
+
+export interface ProjectInput {
+  name: string;
+  agency: string;
+  folderUrl: string;
+  start: string;
+  end: string;
+  budgetEok: number;      // 화면은 억원, 서버가 원으로 바꿔 저장합니다
+  cycle: string;
+  kpis: { name: string; target: number; unit: string }[];
+  tasks: { name: string }[];
+  categories: { name: string; allocated: number }[];
 }

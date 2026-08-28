@@ -4,14 +4,13 @@ import Calendar, { calData } from "../components/Calendar";
 import Modal, { type ModalState } from "../components/Modal";
 import Sidebar, { type View } from "../components/Sidebar";
 import { api } from "../lib/api";
-import { getWhoami, setWhoami } from "../lib/whoami";
 import type { AppSettings, ProjectDetail, ProjectSummary } from "../lib/types";
 import Dashboard from "./Dashboard";
 import Home from "./Home";
+import Register from "./Register";
 
 interface Props {
   usingDefaultPassword: boolean;
-  onLogout: () => void;
 }
 
 interface FullCal {
@@ -20,7 +19,7 @@ interface FullCal {
   picked: string;
 }
 
-export default function Shell({ usingDefaultPassword, onLogout }: Props) {
+export default function Shell({ usingDefaultPassword }: Props) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [details, setDetails] = useState<Record<string, ProjectDetail>>({});
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -29,11 +28,9 @@ export default function Shell({ usingDefaultPassword, onLogout }: Props) {
   const [full, setFull] = useState<FullCal | null>(null);
   const [error, setError] = useState("");
   const [modal, setModal] = useState<ModalState | null>(null);
-  // 입력자 이름 — 계정을 두지 않기로 해서 직접 적습니다.
-  // 한 번 적으면 이 브라우저에 기억됩니다.
-  const [who, setWho] = useState(() => getWhoami());
-  const [nameDraft, setNameDraft] = useState("");
-  const [askName, setAskName] = useState(false);
+  // 사업 정보 수정 모드로 들어왔는지 (null 이면 신규 등록)
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [manualDraft, setManualDraft] = useState<string | null>(null);
 
   // 첫 화면에 필요한 것을 한 번에 받아 둡니다.
   // 달력에 할 일 기한을 표시하려면 사업별 상세가 필요합니다.
@@ -62,24 +59,22 @@ export default function Shell({ usingDefaultPassword, onLogout }: Props) {
     setView(next);
     if (projId) setCurrentId(projId);
     setFull(null);
+    // 메뉴의 '신규 사업 등록'을 누르면 항상 신규 모드로 시작합니다
+    if (next !== "register") setEditingProjectId(null);
     window.scrollTo({ top: 0 });
+  }, []);
+
+  // 목록과 상세를 함께 갱신합니다 (왼쪽 사업 목록의 상태 점도 같이 바뀝니다)
+  const applyProject = useCallback((next: ProjectDetail) => {
+    setDetails((d) => ({ ...d, [next.id]: next }));
+    setProjects((list) => list.some((x) => x.id === next.id)
+      ? list.map((x) => (x.id === next.id ? { ...x, ...next } : x))
+      : [...list, next]);
   }, []);
 
   const openModal = useCallback((msg: string, sub?: string, onOk?: () => void) => {
     setModal({ msg, sub, onOk });
   }, []);
-
-  function saveName() {
-    const v = nameDraft.trim();
-    if (!v) return;
-    setWhoami(v);
-    setWho(v);
-    setAskName(false);
-  }
-
-  async function logout() {
-    try { await api.logout(); } finally { onLogout(); }
-  }
 
   const detail = currentId ? details[currentId] : undefined;
 
@@ -105,7 +100,7 @@ export default function Shell({ usingDefaultPassword, onLogout }: Props) {
         currentId={currentId}
         manualUrl={settings?.manual_url.url ?? ""}
         onGo={go}
-        onEditManual={() => alert("매뉴얼 주소 변경은 5단계에서 붙입니다.")}
+        onEditManual={() => setManualDraft(settings?.manual_url.url ?? "")}
       />
 
       <main className="main">
@@ -131,60 +126,83 @@ export default function Shell({ usingDefaultPassword, onLogout }: Props) {
           <Dashboard
             p={detail}
             allProjects={projects}
-            who={who}
             onGo={(id) => go("dash", id)}
             onZoom={(scope, ym, picked) => setFull({ scope, ym, picked })}
-            onProjectChange={(next) => {
-              setDetails((d) => ({ ...d, [next.id]: next }));
-              // 왼쪽 목록의 상태 점과 전체 현황도 함께 갱신합니다
-              setProjects((list) => list.map((x) => (x.id === next.id ? { ...x, ...next } : x)));
-            }}
+            onProjectChange={applyProject}
             onModal={openModal}
-            onNeedName={() => { setNameDraft(who); setAskName(true); }}
+            onEdit={() => { setEditingProjectId(detail.id); go("register"); }}
           />
         ) : (
           <section className="view on"><div className="empty">사업을 불러오는 중입니다.</div></section>
         ))}
 
-        {(view === "register" || view === "ann") && (
+        {view === "register" && (
+          <Register
+            editing={editingProjectId ? details[editingProjectId] ?? null : null}
+            onSaved={(saved, msg, sub) => {
+              applyProject(saved);
+              setEditingProjectId(null);
+              go("dash", saved.id);
+              openModal(msg, sub);
+            }}
+            onDeleted={(name) => {
+              const gone = editingProjectId;
+              setEditingProjectId(null);
+              setDetails((d) => { const n = { ...d }; if (gone) delete n[gone]; return n; });
+              setProjects((list) => {
+                const next = list.filter((x) => x.id !== gone);
+                setCurrentId(next[0]?.id ?? null);
+                return next;
+              });
+              go("home");
+              openModal("삭제되었습니다", name);
+            }}
+            onCancel={() => {
+              const id = editingProjectId;
+              setEditingProjectId(null);
+              if (id) go("dash", id); else go("home");
+            }}
+            onModal={openModal}
+          />
+        )}
+
+        {view === "ann" && (
           <section className="view on">
-            <div className="page-title">{view === "register" ? "신규 사업 등록" : "사업 현황 — 대외 공고"}</div>
+            <div className="page-title">사업 현황 — 대외 공고</div>
             <div className="card">
-              <p style={{ color: "var(--ink-2)" }}>
-                {view === "register"
-                  ? "사업 등록·수정은 5단계에서 붙입니다."
-                  : "공고 화면과 자동 수집은 6단계에서 붙입니다."}
-              </p>
+              <p style={{ color: "var(--ink-2)" }}>공고 화면과 자동 수집은 6단계에서 붙입니다.</p>
             </div>
           </section>
         )}
 
-        <div style={{ marginTop: 24, paddingBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: "14.4px", color: "var(--muted)" }}>
-            입력자 {who ? <b style={{ color: "var(--ink-2)" }}>{who}</b> : "미지정"}
-          </span>
-          <button type="button" className="mini-btn"
-                  onClick={() => { setNameDraft(who); setAskName(true); }}>이름 변경</button>
-          <button type="button" className="btn-ghost" onClick={logout}>로그아웃</button>
-        </div>
       </main>
 
-      {/* 입력자 이름 — 저장할 때 누가 입력했는지 남기려면 필요합니다 */}
-      {askName && (
+
+      {/* 사업 매뉴얼 문서 주소 — 노션 등 외부 문서로 바로 가는 메뉴에 씁니다 */}
+      {manualDraft !== null && (
         <div className="scrim on" role="dialog" aria-modal="true">
-          <form className="modal form" style={{ maxWidth: 420 }}
-                onSubmit={(e) => { e.preventDefault(); saveName(); }}>
-            <h3>입력자 이름</h3>
+          <form className="modal form" style={{ maxWidth: 520 }}
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    const r = await api.setManualUrl(manualDraft);
+                    setSettings((s) => (s ? { ...s, manual_url: { url: r.url } } : s));
+                    setManualDraft(null);
+                  } catch (ex) {
+                    openModal(ex instanceof Error ? ex.message : "저장하지 못했습니다.");
+                  }
+                }}>
+            <h3>사업 매뉴얼 주소</h3>
             <p style={{ fontSize: "14.4px", color: "var(--ink-2)", marginBottom: 12 }}>
-              입력한 내용에 누가 언제 넣었는지 함께 남깁니다.
-              한 번 적으면 이 브라우저에 기억됩니다.
+              노션 등 사업 매뉴얼 문서 주소를 넣어 두면 왼쪽 메뉴에서 바로 열 수 있습니다.
             </p>
             <div className="f">
-              <input autoFocus value={nameDraft} onChange={(e) => setNameDraft(e.target.value)}
-                     placeholder="예: 김담당" />
+              <input autoFocus value={manualDraft} spellCheck={false}
+                     placeholder="https://www.notion.so/..."
+                     onChange={(e) => setManualDraft(e.target.value)} />
             </div>
             <div className="acts" style={{ marginTop: 16 }}>
-              <button type="button" className="no" onClick={() => setAskName(false)}>취소</button>
+              <button type="button" className="no" onClick={() => setManualDraft(null)}>취소</button>
               <button type="submit" className="ok">저장</button>
             </div>
           </form>
@@ -196,8 +214,8 @@ export default function Shell({ usingDefaultPassword, onLogout }: Props) {
       {/* 달력 크게 보기 */}
       {full && fullData && (
         <div className="scrim on" id="calScrim" role="dialog" aria-modal="true">
-          <div className="modal cal-modal">
-            <div className="cal-modal-head">
+          <div className="modal cal-full cal-card big">
+            <div className="cal-full-head">
               <h3 id="calFullName">{fullData.title}</h3>
               <button type="button" className="cal-close" onClick={() => setFull(null)}
                       aria-label="닫기" autoFocus>×</button>

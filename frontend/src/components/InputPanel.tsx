@@ -19,19 +19,17 @@ interface SpendRow {
 
 interface Props {
   p: ProjectDetail;
-  who: string;
   editingKey: string | null;             // 수정 중인 회차 (없으면 신규)
   onEditingKeyChange: (k: string | null) => void;
   onSaved: (p: ProjectDetail, msg: string, sub: string) => void;
   onConflict: (message: string, sub: string, onOverwrite: () => void) => void;
-  onNeedName: () => void;
 }
 
 const onlyDigits = (s: string) => s.replace(/[^\d]/g, "");
 const commas = (s: string) => (s === "" ? "" : Number(s).toLocaleString("ko-KR"));
 
 export default function InputPanel({
-  p, who, editingKey, onEditingKeyChange, onSaved, onConflict, onNeedName,
+  p, editingKey, onEditingKeyChange, onSaved, onConflict,
 }: Props) {
   const [periods, setPeriods] = useState<PeriodOption[]>([]);
   const [selected, setSelected] = useState("");
@@ -94,7 +92,6 @@ export default function InputPanel({
 
   // ----- 즉시 저장되는 것들 -----
   async function immediate(run: () => Promise<ProjectDetail>, what: string) {
-    if (!who) { onNeedName(); return; }
     try {
       const next = await run();
       onSaved(next, "", what);
@@ -138,14 +135,13 @@ export default function InputPanel({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
-    if (!who) { onNeedName(); return; }
     const payload = collect();
     if (!payload) return;
 
     const send = async (base: number) => {
       setBusy(true);
       try {
-        const r = await api.saveEntry(p.id, target, who, { ...payload, baseVersion: base });
+        const r = await api.saveEntry(p.id, target, { ...payload, baseVersion: base });
         const b = r.project;
         onSaved(b, "저장되었습니다",
           b.rate > 100 ? "집행 누계가 총 사업비를 초과했습니다."
@@ -158,7 +154,7 @@ export default function InputPanel({
             info.message,
             info.kind === "exists"
               ? "기존 내용을 이번 입력으로 바꿉니다. 집행액은 더해지지 않고 교체됩니다."
-              : `${info.who} 님이 저장한 내용을 이번 입력으로 바꿉니다.`,
+              : "다른 분이 저장한 내용을 이번 입력으로 바꿉니다.",
             () => void send(info.current.version)
           );
         } else {
@@ -197,7 +193,7 @@ export default function InputPanel({
         <div className="cap">1 · 진행 단계</div>
         <select id="wkStage" aria-label="현재 진행 단계 선택" value={p.stage}
                 onChange={(e) => immediate(
-                  () => api.setStage(p.id, Number(e.target.value), who), "진행 단계를 바꿨습니다")}>
+                  () => api.setStage(p.id, Number(e.target.value)), "진행 단계를 바꿨습니다")}>
           {p.stages.map((nm, i) => <option key={nm} value={i}>{nm}</option>)}
         </select>
         <div id="wkStageNotes" style={{ marginTop: 10 }}>
@@ -210,7 +206,7 @@ export default function InputPanel({
                      onBlur={(e) => {
                        const v = e.target.value.trim();
                        if (v !== (p.stageNotes[i] || "")) {
-                         void immediate(() => api.setStageNote(p.id, i, v, who), "단계 내용을 저장했습니다");
+                         void immediate(() => api.setStageNote(p.id, i, v), "단계 내용을 저장했습니다");
                        }
                      }} />
             </div>
@@ -225,7 +221,7 @@ export default function InputPanel({
             <label key={i} className={"chk " + (t.done ? "done" : "")}>
               <input type="checkbox" checked={t.done}
                      onChange={(e) => immediate(
-                       () => api.setTask(p.id, i, e.target.checked, who), "추진과제를 저장했습니다")} />
+                       () => api.setTask(p.id, i, e.target.checked), "추진과제를 저장했습니다")} />
               <span>{t.name}</span>
             </label>
           ))}

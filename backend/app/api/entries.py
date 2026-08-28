@@ -3,9 +3,8 @@ from __future__ import annotations
 
 from datetime import date
 from typing import Any
-from urllib.parse import unquote
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -22,24 +21,6 @@ router = APIRouter(
     tags=["entries"],
     dependencies=[Depends(require_session)],
 )
-
-
-def entered_by(x_entered_by: str = Header(default="")) -> str:
-    """
-    입력자 이름.
-
-    담당자 계정을 두지 않기로 해서, 화면에서 직접 적은 이름을 요청 머리말에
-    담아 보냅니다. 나중에 사내 계정을 붙이면 이 함수만 계정 이름을 돌려주도록
-    바꾸면 되고, 나머지 코드는 손대지 않아도 됩니다.
-
-    HTTP 머리말은 latin-1 만 담을 수 있어서 한글 이름을 그대로 넣으면 깨집니다
-    ('김담당' → 'ê¹ë´ë¹'). 화면에서 encodeURIComponent 로 감싸 보내고
-    여기서 풉니다.
-    """
-    name = unquote((x_entered_by or "").strip())
-    if not name:
-        raise HTTPException(status_code=400, detail="입력자 이름을 적어 주세요.")
-    return name[:60]
 
 
 def get_project(project_id: str, db: Session = Depends(get_db)) -> Project:
@@ -102,7 +83,6 @@ def save_entry(
     response: Response,
     p: Project = Depends(get_project),
     db: Session = Depends(get_db),
-    who: str = Depends(entered_by),
 ) -> dict[str, Any]:
     # 회차 키가 이 사업의 것인지 확인합니다.
     # 목록에 없는 오래된 회차도 허용해야 하므로, 키에서 날짜를 되짚어 확인합니다.
@@ -130,7 +110,7 @@ def save_entry(
         issue=body.issue.strip(), plan=body.plan.strip(),
     )
     try:
-        entry = svc.save_entry(db, p, period_key, target.start, data, who, body.baseVersion)
+        entry = svc.save_entry(db, p, period_key, target.start, data, body.baseVersion)
     except svc.SaveConflict as c:
         response.status_code = 409
         return c.payload()
@@ -144,9 +124,8 @@ def delete_entry(
     period_key: str,
     p: Project = Depends(get_project),
     db: Session = Depends(get_db),
-    who: str = Depends(entered_by),
 ) -> dict[str, Any]:
-    if not svc.delete_entry(db, p, period_key, who):
+    if not svc.delete_entry(db, p, period_key):
         raise HTTPException(status_code=404, detail="그 회차를 찾을 수 없습니다.")
     db.refresh(p)
     return {"project": pjsvc.detail(p)}
@@ -157,9 +136,8 @@ def toggle_issue(
     period_key: str,
     p: Project = Depends(get_project),
     db: Session = Depends(get_db),
-    who: str = Depends(entered_by),
 ) -> dict[str, Any]:
-    if svc.toggle_issue_done(db, p, period_key, who) is None:
+    if svc.toggle_issue_done(db, p, period_key) is None:
         raise HTTPException(status_code=404, detail="확인사항이 있는 회차가 아닙니다.")
     db.refresh(p)
     return {"project": pjsvc.detail(p)}
@@ -203,12 +181,10 @@ def set_stage(
     body: StageIn,
     p: Project = Depends(get_project),
     db: Session = Depends(get_db),
-    who: str = Depends(entered_by),
 ) -> dict[str, Any]:
     if not (0 <= body.stage < len(STAGES)):
         raise HTTPException(status_code=400, detail="진행 단계 값이 올바르지 않습니다.")
     p.stage = body.stage
-    p.updated_by = who
     db.commit()
     db.refresh(p)
     return pjsvc.detail(p)
@@ -224,7 +200,6 @@ def set_stage_note(
     body: StageNoteIn,
     p: Project = Depends(get_project),
     db: Session = Depends(get_db),
-    who: str = Depends(entered_by),
 ) -> dict[str, Any]:
     if not (0 <= body.index < len(STAGES)):
         raise HTTPException(status_code=400, detail="단계 번호가 올바르지 않습니다.")
@@ -233,7 +208,6 @@ def set_stage_note(
         row = ProjectStageNote(project_id=p.id, stage_index=body.index)
         p.stage_notes.append(row)
     row.note = body.note.strip()
-    p.updated_by = who
     db.commit()
     db.refresh(p)
     return pjsvc.detail(p)
@@ -249,13 +223,11 @@ def set_task(
     body: TaskIn,
     p: Project = Depends(get_project),
     db: Session = Depends(get_db),
-    who: str = Depends(entered_by),
 ) -> dict[str, Any]:
     tasks = sorted(p.tasks, key=lambda t: t.sort_order)
     if not (0 <= body.index < len(tasks)):
         raise HTTPException(status_code=400, detail="추진과제 번호가 올바르지 않습니다.")
     tasks[body.index].done = body.done
-    p.updated_by = who
     db.commit()
     db.refresh(p)
     return pjsvc.detail(p)
@@ -272,7 +244,6 @@ def add_todo(
     body: TodoIn,
     p: Project = Depends(get_project),
     db: Session = Depends(get_db),
-    who: str = Depends(entered_by),
 ) -> dict[str, Any]:
     text = body.text.strip()
     if not text:
@@ -287,8 +258,7 @@ def add_todo(
     p.todos.append(
         ProjectTodo(
             id=f"t{int(today().toordinal())}-{order}-{abs(hash(text)) % 10000}",
-            text=text, due=due, done=False, sort_order=order, created_by=who,
-        )
+            text=text, due=due, done=False, sort_order=order, )
     )
     db.commit()
     db.refresh(p)
@@ -300,13 +270,11 @@ def toggle_todo(
     todo_id: str,
     p: Project = Depends(get_project),
     db: Session = Depends(get_db),
-    who: str = Depends(entered_by),
 ) -> dict[str, Any]:
     t = next((x for x in p.todos if x.id == todo_id), None)
     if t is None:
         raise HTTPException(status_code=404, detail="할 일을 찾을 수 없습니다.")
     t.done = not t.done
-    p.updated_by = who
     db.commit()
     db.refresh(p)
     return pjsvc.detail(p)
@@ -317,7 +285,6 @@ def remove_todo(
     todo_id: str,
     p: Project = Depends(get_project),
     db: Session = Depends(get_db),
-    who: str = Depends(entered_by),
 ) -> dict[str, Any]:
     t = next((x for x in p.todos if x.id == todo_id), None)
     if t is None:

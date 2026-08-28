@@ -14,7 +14,6 @@ os.environ["APP_PASSWORD_HASH"] = ""      # 개발용 기본 비밀번호로 로
 os.environ["SECRET_KEY"] = "test-only-key"
 
 from fastapi.testclient import TestClient        # noqa: E402
-from urllib.parse import quote                   # noqa: E402
 
 from app.db.session import Base, SessionLocal, engine   # noqa: E402
 from app.main import app                                # noqa: E402
@@ -52,7 +51,3 @@ def client(db):
     assert r.status_code == 200, r.text
     return c
 
-
-def who(name: str) -> dict[str, str]:
-    """입력자 이름을 화면(encodeURIComponent)과 같은 방식으로 담습니다."""
-    return {"X-Entered-By": quote(name)}

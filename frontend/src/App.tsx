@@ -30,15 +30,13 @@ export default function App() {
     setStatus("in");
   }, []);
 
-  const onLogout = useCallback(() => setStatus("out"), []);
-
   // 세션을 확인하는 아주 짧은 순간입니다.
   // 여기서 로그인 화면을 먼저 그리면, 이미 로그인한 사람에게도 로그인 화면이
   // 한 번 번쩍이고 사라집니다. 그래서 아무것도 그리지 않고 기다립니다.
   if (status === "checking") return <div style={{ minHeight: "100vh" }} />;
 
   return status === "in" ? (
-    <Shell usingDefaultPassword={usingDefaultPassword} onLogout={onLogout} />
+    <Shell usingDefaultPassword={usingDefaultPassword} />
   ) : (
     <Login onSuccess={onSuccess} />
   );

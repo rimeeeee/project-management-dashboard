@@ -17,7 +17,6 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.core.timeutil import kst_iso, kst_short
 from app.core.periods import period_of
 from app.models import EntryKpiValue, EntryRevision, EntrySpend, Project, ReportEntry
 from app.services import projects as pjsvc
@@ -39,18 +38,14 @@ class SaveConflict(Exception):
         super().__init__(kind)
 
     def payload(self) -> dict[str, Any]:
-        who = self.entry.updated_by or self.entry.entered_by or "다른 사용자"
-        when = kst_short(self.entry.updated_at)
         per = period_of(self.project.cycle, self.project.start, self.entry.entry_date)
         if self.kind == "exists":
             msg = f"{per.label} 회차는 이미 입력되어 있습니다."
         else:
-            msg = f"이 회차는 방금 다른 분이 저장했습니다 ({who} · {when})."
+            msg = "이 회차는 방금 다른 분이 저장했습니다."
         return {
             "kind": self.kind,
             "message": msg,
-            "who": who,
-            "when": when,
             "current": pjsvc._entry_out(self.project, self.entry),
         }
 
@@ -66,9 +61,7 @@ class EntryInput:
 
 def _snapshot(p: Project, e: ReportEntry) -> dict[str, Any]:
     """바뀌기 전 내용을 그대로 담아 둡니다."""
-    out = pjsvc._entry_out(p, e)
-    out["createdAt"] = kst_iso(e.created_at)
-    return out
+    return pjsvc._entry_out(p, e)
 
 
 def _next_revision_no(db: Session, project_id: str, period_key: str) -> int:
@@ -113,7 +106,6 @@ def save_entry(
     period_key: str,
     entry_date: date,
     data: EntryInput,
-    who: str,
     base_version: int,
 ) -> ReportEntry:
     """
@@ -136,8 +128,6 @@ def save_entry(
             project_id=p.id,
             period_key=period_key,
             entry_date=entry_date,
-            entered_by=who,
-            updated_by=who,
             version=1,
         )
         _apply(db, entry, data)
@@ -158,18 +148,16 @@ def save_entry(
             revision_no=_next_revision_no(db, p.id, period_key),
             action="update",
             snapshot=_snapshot(p, existing),
-            changed_by=who,
         )
     )
     _apply(db, existing, data)
-    existing.updated_by = who
     existing.version += 1
     db.commit()
     db.refresh(existing)
     return existing
 
 
-def delete_entry(db: Session, p: Project, period_key: str, who: str) -> bool:
+def delete_entry(db: Session, p: Project, period_key: str) -> bool:
     entry = (
         db.query(ReportEntry)
         .filter(ReportEntry.project_id == p.id, ReportEntry.period_key == period_key)
@@ -187,7 +175,6 @@ def delete_entry(db: Session, p: Project, period_key: str, who: str) -> bool:
             revision_no=_next_revision_no(db, p.id, period_key),
             action="delete",
             snapshot=_snapshot(p, entry),
-            changed_by=who,
         )
     )
     db.delete(entry)
@@ -195,7 +182,7 @@ def delete_entry(db: Session, p: Project, period_key: str, who: str) -> bool:
     return True
 
 
-def toggle_issue_done(db: Session, p: Project, period_key: str, who: str) -> ReportEntry | None:
+def toggle_issue_done(db: Session, p: Project, period_key: str) -> ReportEntry | None:
     entry = (
         db.query(ReportEntry)
         .filter(ReportEntry.project_id == p.id, ReportEntry.period_key == period_key)
@@ -204,7 +191,6 @@ def toggle_issue_done(db: Session, p: Project, period_key: str, who: str) -> Rep
     if entry is None or not entry.issue.strip():
         return None
     entry.issue_done = not entry.issue_done
-    entry.updated_by = who
     entry.version += 1
     db.commit()
     db.refresh(entry)
