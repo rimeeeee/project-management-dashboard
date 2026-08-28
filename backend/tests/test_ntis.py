@@ -75,3 +75,45 @@ def test_수집기간_밖의_공고는_제외한다(monkeypatch):
     r = sources.ntis()
     assert r.items == []
     assert r.notes and "수집기간" in r.notes[0]
+
+
+def test_최신_100건이_수집기간을_못_덮으면_날짜별로_더_받는다(monkeypatch):
+    """
+    NTIS 는 한 번에 최대 100건만 줍니다(prt 상한). Fi 는 그 묶음 안에서만
+    움직여 100건 너머로 갈 수 없습니다.
+
+    실제로 최신 100건은 72일치였고 수집기간 90일에서 18일이 빠져
+    38건을 놓치고 있었습니다. 그래서 덮지 못한 날짜만 dt= 로 채웁니다.
+    """
+    import datetime
+
+    calls: list[str] = []
+
+    def fake_get(url, *a, **k):
+        calls.append(url)
+        return SAMPLE.read_text(encoding="utf-8")
+
+    monkeypatch.setattr(sources, "get", fake_get)
+    monkeypatch.setattr(sources, "COLLECT_DAYS", 100000)
+    monkeypatch.setattr(sources, "NTIS_MAX", 4)      # 표본이 4건이라 '꽉 찼다'고 보게 합니다
+    monkeypatch.setattr(sources.time, "sleep", lambda *_: None)
+    monkeypatch.setattr(sources, "today", lambda: datetime.date(2026, 8, 22))
+
+    r = sources.ntis()
+
+    # 최신 묶음 1회 + 못 덮은 날짜만큼 dt= 조회가 있어야 합니다
+    assert any("dt=" in c for c in calls), "날짜별 조회를 하지 않았습니다"
+    assert r.notes and "날짜별로 더 받았습니다" in r.notes[0]
+    # 같은 공고가 양쪽에 나와도 한 번만 담겨야 합니다
+    urls = [a["url"] for a in r.items]
+    assert len(urls) == len(set(urls))
+
+
+def test_최신_100건이_수집기간을_다_덮으면_날짜별_조회를_하지_않는다(monkeypatch):
+    calls: list[str] = []
+    monkeypatch.setattr(sources, "get", lambda url, *a, **k: (calls.append(url),
+                                                              SAMPLE.read_text(encoding="utf-8"))[1])
+    monkeypatch.setattr(sources, "COLLECT_DAYS", 100000)
+    monkeypatch.setattr(sources, "NTIS_MAX", 100)    # 표본 4건 < 100 → 덜 찼음
+    sources.ntis()
+    assert not any("dt=" in c for c in calls)

@@ -10,12 +10,9 @@ import Home from "./Home";
 import Register from "./Register";
 import Announcements from "./Announcements";
 import AnnForm from "../components/AnnForm";
-import AnnImport from "../components/AnnImport";
 import type { Ann } from "../lib/annApi";
 
-interface Props {
-  usingDefaultPassword: boolean;
-}
+
 
 interface FullCal {
   scope: "home" | "dash";
@@ -23,7 +20,7 @@ interface FullCal {
   picked: string;
 }
 
-export default function Shell({ usingDefaultPassword }: Props) {
+export default function Shell() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [details, setDetails] = useState<Record<string, ProjectDetail>>({});
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -37,7 +34,6 @@ export default function Shell({ usingDefaultPassword }: Props) {
   const [manualDraft, setManualDraft] = useState<string | null>(null);
   // 공고 화면 — 등록·수정 팝업과 불러오기 팝업, 그리고 목록 새로고침 신호
   const [annForm, setAnnForm] = useState<{ ann: Ann | null } | null>(null);
-  const [annImport, setAnnImport] = useState(false);
   const [annReload, setAnnReload] = useState(0);
   const [annMinistries, setAnnMinistries] = useState<string[]>([]);
 
@@ -113,12 +109,6 @@ export default function Shell({ usingDefaultPassword }: Props) {
       />
 
       <main className="main">
-        {usingDefaultPassword && (
-          <div className="login-notice" style={{ marginBottom: 16 }}>
-            지금은 개발용 기본 비밀번호로 동작하고 있습니다. 실제로 쓰기 전에{" "}
-            <code>.venv/bin/python scripts/set_password.py</code> 로 비밀번호를 정해 주세요.
-          </div>
-        )}
 
         {error && <div className="form-err on" style={{ marginBottom: 16 }}>{error}</div>}
 
@@ -181,7 +171,6 @@ export default function Shell({ usingDefaultPassword }: Props) {
             onSettings={setSettings}
             onModal={openModal}
             onEditAnn={(a) => setAnnForm({ ann: a })}
-            onImport={() => setAnnImport(true)}
             onFacets={setAnnMinistries}
             reloadToken={annReload}
           />
@@ -230,12 +219,6 @@ export default function Shell({ usingDefaultPassword }: Props) {
         />
       )}
 
-      {annImport && (
-        <AnnImport
-          onDone={(msg, sub) => { setAnnImport(false); setAnnReload((n) => n + 1); openModal(msg, sub); }}
-          onClose={() => setAnnImport(false)}
-        />
-      )}
 
       <Modal state={modal} onClose={() => setModal(null)} />
 

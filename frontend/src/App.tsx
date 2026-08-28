@@ -7,7 +7,6 @@ type Status = "checking" | "out" | "in";
 
 export default function App() {
   const [status, setStatus] = useState<Status>("checking");
-  const [usingDefaultPassword, setUsingDefaultPassword] = useState(false);
 
   // 새로고침해도 쿠키가 살아 있으면 다시 로그인하지 않아도 됩니다.
   useEffect(() => {
@@ -16,7 +15,6 @@ export default function App() {
       .session()
       .then((info) => {
         if (!alive) return;
-        setUsingDefaultPassword(info.using_default_password);
         setStatus(info.authenticated ? "in" : "out");
       })
       .catch(() => alive && setStatus("out"));
@@ -25,10 +23,7 @@ export default function App() {
     };
   }, []);
 
-  const onSuccess = useCallback((dev: boolean) => {
-    setUsingDefaultPassword(dev);
-    setStatus("in");
-  }, []);
+  const onSuccess = useCallback(() => setStatus("in"), []);
 
   // 세션을 확인하는 아주 짧은 순간입니다.
   // 여기서 로그인 화면을 먼저 그리면, 이미 로그인한 사람에게도 로그인 화면이
@@ -36,7 +31,7 @@ export default function App() {
   if (status === "checking") return <div style={{ minHeight: "100vh" }} />;
 
   return status === "in" ? (
-    <Shell usingDefaultPassword={usingDefaultPassword} />
+    <Shell />
   ) : (
     <Login onSuccess={onSuccess} />
   );

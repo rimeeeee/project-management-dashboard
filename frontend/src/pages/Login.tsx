@@ -4,7 +4,7 @@ import { currentTheme, themeButtonLabel, toggleTheme, type Theme } from "../lib/
 import "../styles/login.css";
 
 interface Props {
-  onSuccess: (usingDefaultPassword: boolean) => void;
+  onSuccess: () => void;
 }
 
 export default function Login({ onSuccess }: Props) {
@@ -32,8 +32,8 @@ export default function Login({ onSuccess }: Props) {
     setBusy(true);
     setError("");
     try {
-      const info = await api.login(password, remember);
-      onSuccess(info.using_default_password);
+      await api.login(password, remember);
+      onSuccess();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "로그인하지 못했습니다.");
       setPassword("");

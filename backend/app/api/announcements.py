@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query as Q
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.collector import runner
+from app.collector import runner  # noqa: F401  (수집 실행에 씁니다)
 from app.core.security import require_session
 from app.core.timeutil import kst_iso
 from app.db.session import get_db
@@ -147,28 +147,6 @@ def delete_announcement(ann_id: str, db: Session = Depends(get_db)) -> dict[str,
 
 
 # ------------------------------------------------------------------ 수집
-class ImportIn(BaseModel):
-    announcements: list[dict[str, Any]] = Field(default_factory=list)
-
-
-@router.post("/import")
-def import_announcements(body: ImportIn, db: Session = Depends(get_db)) -> dict[str, Any]:
-    """
-    수집 스크립트가 만든 JSON 을 붙여넣어 넣습니다.
-
-    서버가 바깥 인터넷에 나갈 수 없는 것으로 판명될 경우의 대비책으로 남겨 둡니다.
-    인터넷이 되는 PC 에서 스크립트를 돌려 결과만 올릴 수 있습니다.
-    """
-    from datetime import datetime, timezone
-
-    if not body.announcements:
-        raise HTTPException(status_code=400, detail="공고 목록을 찾을 수 없습니다. 수집 스크립트가 만든 파일인지 확인하세요.")
-    added, updated, kept = runner.upsert(
-        db, body.announcements, datetime.now(timezone.utc))
-    db.commit()
-    return {"added": added, "updated": updated, "kept": kept}
-
-
 collector_router = APIRouter(prefix="/api/collector", tags=["collector"],
                              dependencies=[Depends(require_session)])
 

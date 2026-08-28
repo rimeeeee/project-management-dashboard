@@ -278,22 +278,59 @@ def _ntis_items(url: str) -> list[dict]:
 
 def ntis() -> SourceResult:
     """
-    NTIS 통합공고 — 최신 100건.
+    NTIS 통합공고 — 수집기간 전체를 받습니다.
 
-    전 부처라 건수가 많지만(전체 1만 건이 넘습니다) 하루에 새로 올라오는 것은
-    두어 건 수준입니다. 주 2회 수집이면 최신 100건으로 충분히 덮습니다.
+    NTIS 는 한 번에 최대 100건만 줍니다(prt 상한). Fi 는 '전체에서 몇 번째부터'가
+    아니라 'prt 로 가져온 묶음 안의 시작 행'이라, 한 번의 요청으로는 100건 너머를
+    볼 수 없습니다.
 
-    수집 단계에서 키워드로 버리지 않고 전량 저장합니다. 걸러내기는 화면에서만 합니다.
+    실제로 재어 보니 최신 100건은 72일치였고, 수집기간 90일에서 18일이 빠졌습니다
+    (그만큼 38건을 놓쳤습니다). 그래서 이렇게 합니다.
+
+      1) prt=100 으로 최신 100건을 받습니다
+      2) 그 100건이 덮지 못한 이전 날짜만 dt=YYYYMMDD 로 하루씩 채웁니다
+
+    100건이 이미 수집기간 전체를 덮으면 2)는 건너뜁니다. 남은 날짜만 훑기 때문에
+    90일을 통째로 도는 것보다 훨씬 빠릅니다.
     """
     r = SourceResult(key="ntis-rss", name="NTIS 통합공고")
-    items = _ntis_items(f"{NTIS_URL}?prt={NTIS_MAX}")
-    kept = [a for a in items if in_period(a["posted"])]
-    if len(kept) < len(items):
-        r.notes.append(f"{len(items)}건 중 수집기간({COLLECT_DAYS}일) 안의 {len(kept)}건만 담았습니다.")
-    # 최신 100건을 꽉 채워 받았다면 그 너머에 더 있을 수 있다는 뜻입니다
-    if len(items) >= NTIS_MAX and all(in_period(a["posted"]) for a in items):
-        r.notes.append("최신 100건이 모두 수집기간 안입니다 — 그 이전 공고는 "
-                       "scripts/ntis_backfill.py 로 채워 주세요.")
+    oldest_wanted = today() - datetime.timedelta(days=COLLECT_DAYS)
+
+    latest = _ntis_items(f"{NTIS_URL}?prt={NTIS_MAX}")
+    items = list(latest)
+
+    # 최신 묶음이 어느 날짜까지 덮었는지
+    dates = [a["posted"] for a in latest if a["posted"]]
+    covered_from = min(dates) if dates else None
+
+    if len(latest) >= NTIS_MAX and covered_from:
+        edge = datetime.date.fromisoformat(covered_from)
+        # 경계 날짜는 100건에서 잘렸을 수 있으므로 그 날짜부터 다시 훑습니다
+        day = edge
+        gap_days = 0
+        while day >= oldest_wanted:
+            try:
+                items.extend(ntis_by_date(day))
+            except Exception as e:  # noqa: BLE001 - 하루가 실패해도 나머지는 계속
+                log.warning("NTIS %s 을(를) 못 읽었습니다 (%s)", day, type(e).__name__)
+            gap_days += 1
+            day -= datetime.timedelta(days=1)
+            time.sleep(0.2)   # 서버 부담을 줄이기 위해 잠깐 쉽니다
+        if gap_days:
+            r.notes.append(f"최신 100건이 덮지 못한 {gap_days}일치를 날짜별로 더 받았습니다.")
+
+    # 같은 공고가 최신 묶음과 날짜별 조회 양쪽에 나옵니다
+    unique, seen = [], set()
+    for a in items:
+        k = a["url"] or a["title"]
+        if k in seen:
+            continue
+        seen.add(k)
+        unique.append(a)
+
+    kept = [a for a in unique if in_period(a["posted"])]
+    if len(kept) < len(unique):
+        r.notes.append(f"{len(unique)}건 중 수집기간({COLLECT_DAYS}일) 안의 {len(kept)}건만 담았습니다.")
     r.items = kept
     return r
 

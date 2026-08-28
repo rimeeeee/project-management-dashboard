@@ -31,14 +31,13 @@ interface Props {
   onSettings: (s: AppSettings) => void;
   onModal: (msg: string, sub?: string, onOk?: () => void) => void;
   onEditAnn: (a: Ann | null) => void;
-  onImport: () => void;
   // 공고 추가 폼의 '부처' 자동완성에 쓰라고 위로 올려 줍니다
   onFacets: (ministries: string[]) => void;
   reloadToken: number;          // 등록·수정·불러오기 뒤 목록을 다시 받게 하는 값
 }
 
 export default function Announcements({
-  settings, onSettings, onModal, onEditAnn, onImport, onFacets, reloadToken,
+  settings, onSettings, onModal, onEditAnn, onFacets, reloadToken,
 }: Props) {
   const f = settings.ann_filter;
   const [data, setData] = useState<AnnPage | null>(null);
@@ -156,16 +155,13 @@ export default function Announcements({
         {실패.length > 0 && (
           <span style={{ color: "var(--crit-ink)" }}>· {실패.map((s) => s.name).join(", ")} 실패</span>
         )}
-        <span style={{ color: "var(--muted)" }}>
-          · 자동 수집 {collector?.enabled
-            ? describeCron(collector.cron)
-            : "꺼짐 — [지금 수집]으로만 받습니다"}
-        </span>
+        {collector?.enabled && (
+          <span style={{ color: "var(--muted)" }}>· 자동 수집 {describeCron(collector.cron)}</span>
+        )}
         <span className="spacer" />
         <button type="button" className="mini-btn" onClick={runCollector} disabled={busy}>
           {busy ? "수집 중…" : "지금 수집"}
         </button>
-        <button type="button" className="mini-btn" onClick={onImport}>수집 데이터 불러오기</button>
         <button type="button" className="btn-add-ann" style={{ marginLeft: 0 }}
                 onClick={() => onEditAnn(null)}>+ 공고 추가</button>
       </div>

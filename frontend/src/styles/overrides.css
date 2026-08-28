@@ -1,0 +1,10 @@
+/* 프로토타입에서 일부러 바꾼 것만 모아 둡니다.
+
+   prototype.css 는 프로토타입에서 그대로 복사한 파일이라 손대지 않습니다.
+   바꿀 일이 있으면 여기에 적어서, 무엇을 왜 바꿨는지가 남게 합니다. */
+
+/* 달력 범례의 사업명이 작아서 키웠습니다 (13.2px → 15.6px).
+   색 막대도 글자에 맞춰 조금 키웠습니다. */
+.cal-legend .row.runs .run-key{font-size:15.6px;color:var(--ink-2)}
+.cal-legend .row.runs .run-key i{width:18px;height:6px;border-radius:3px}
+.cal-legend .row.runs{gap:7px}

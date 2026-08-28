@@ -22,9 +22,11 @@ ENV = ROOT / ".env"
 
 def main() -> int:
     pw = getpass.getpass("새 비밀번호: ")
-    if len(pw) < 8:
-        print("비밀번호는 8자 이상으로 정해 주세요.")
+    if not pw:
+        print("비밀번호를 입력해 주세요.")
         return 1
+    if len(pw) < 8:
+        print("참고: 8자 미만이라 짐작하기 쉽습니다. 그대로 진행합니다.")
     if pw != getpass.getpass("한 번 더 입력: "):
         print("두 번 입력한 비밀번호가 다릅니다.")
         return 1
