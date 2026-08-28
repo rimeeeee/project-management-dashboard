@@ -241,7 +241,10 @@ export default function Announcements({
       <div className="ann-count" id="annCount">
         {data && (data.total
           ? <span>전체 <b>{data.total.toLocaleString()}건</b> 중 {data.from.toLocaleString()} – {data.to.toLocaleString()}번째</span>
-          : <span>조건에 맞는 공고가 없습니다</span>)}
+          : (data.facets.tabs.all === 0 && !collector?.last
+              // 처음 켠 상태 — 조건 문제가 아니라 아직 한 번도 안 받아온 것입니다
+              ? <span>아직 공고를 받아온 적이 없습니다. 위의 [지금 수집]을 눌러 주세요.</span>
+              : <span>조건에 맞는 공고가 없습니다</span>))}
         <span className="size">
           <label htmlFor="annSize">쪽당</label>
           <select id="annSize" value={size}

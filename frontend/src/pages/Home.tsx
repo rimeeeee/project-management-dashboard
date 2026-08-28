@@ -142,7 +142,7 @@ export default function Home({ projects, details, onGo, onZoom }: Props) {
                 <td>{p.latestIssue || <span style={{ color: "var(--muted)" }}>없음</span>}</td>
               </tr>
             )) : (
-              <tr><td colSpan={7}><div className="empty">등록된 사업이 없습니다.</div></td></tr>
+              <tr><td colSpan={7}><div className="empty">아직 등록된 사업이 없습니다. 왼쪽 메뉴의 [신규 사업 등록]에서 시작하세요.</div></td></tr>
             )}
           </tbody>
         </table></div>
