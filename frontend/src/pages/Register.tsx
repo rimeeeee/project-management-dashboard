@@ -22,8 +22,17 @@ const DEFAULT_CATEGORIES = ["인건비", "연구활동비", "장비·재료비",
 interface KpiRow { name: string; target: string; unit: string }
 interface CatRow { name: string; amt: string }
 
+/* 공고에서 [사업 등록] 을 눌렀을 때 미리 채워 넣는 값.
+   공고 목록에는 사업 기간·추진과제가 없으므로 채울 수 있는 것만 채웁니다. */
+export interface Prefill {
+  name: string;
+  agency: string;
+  budget: string;      // 억원, 화면에 보이는 그대로
+}
+
 interface Props {
   editing: ProjectDetail | null;     // null 이면 신규 등록
+  prefill?: Prefill | null;
   onSaved: (p: ProjectDetail, msg: string, sub: string) => void;
   onDeleted: (name: string) => void;
   onCancel: () => void;
@@ -33,7 +42,7 @@ interface Props {
 const onlyDigits = (s: string) => s.replace(/[^\d]/g, "");
 const commas = (s: string) => (s === "" ? "" : Number(s).toLocaleString("ko-KR"));
 
-export default function Register({ editing, onSaved, onDeleted, onCancel, onModal }: Props) {
+export default function Register({ editing, prefill, onSaved, onDeleted, onCancel, onModal }: Props) {
   const [name, setName] = useState("");
   const [agency, setAgency] = useState("");
   const [folder, setFolder] = useState("");
@@ -64,14 +73,18 @@ export default function Register({ editing, onSaved, onDeleted, onCancel, onModa
         ? editing.categories.map((c) => ({ name: c.name, amt: c.allocated ? commas(String(c.allocated)) : "" }))
         : [{ name: "", amt: "" }]);
     } else {
-      setName(""); setAgency(""); setFolder(""); setStart(""); setEnd("");
-      setBudget(""); setCycle("주간");
+      // 공고에서 넘어왔으면 옮겨 온 값으로 시작합니다
+      setName(prefill?.name ?? "");
+      setAgency(prefill?.agency ?? "");
+      setBudget(prefill?.budget ?? "");
+      setFolder(""); setStart(""); setEnd("");
+      setCycle("주간");
       setKpis(Array.from({ length: 4 }, () => ({ name: "", target: "", unit: "" })));
       setTasks(Array.from({ length: 4 }, () => ""));
       setCats(DEFAULT_CATEGORIES.map((c) => ({ name: c, amt: "" })));
     }
     setErr("");
-  }, [editing?.id, editing === null]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editing?.id, editing === null, prefill]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   /* 입력 내역이 있으면 회차 계산 기준은 바꾸지 못하게 막습니다 (기존 회차가 어긋납니다).
      주간·월간 회차 키는 시작일과 상관없으므로 격주일 때만 시작일도 함께 잠급니다. */
@@ -132,6 +145,7 @@ export default function Register({ editing, onSaved, onDeleted, onCancel, onModa
             <div className="f" style={{ gridColumn: "1/-1" }}>
               <label htmlFor="rgName">사업명 *</label>
               <input id="rgName" placeholder="예: 연구중심병원 육성(R&D) 협력지원 과제"
+                     autoFocus={!!prefill}
                      value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div className="f" style={{ gridColumn: "1/-1" }}>

@@ -31,13 +31,15 @@ interface Props {
   onSettings: (s: AppSettings) => void;
   onModal: (msg: string, sub?: string, onOk?: () => void) => void;
   onEditAnn: (a: Ann | null) => void;
+  // 공고를 '내 사업'으로 옮겨 등록 화면을 채웁니다
+  onToProject: (a: Ann) => void;
   // 공고 추가 폼의 '부처' 자동완성에 쓰라고 위로 올려 줍니다
   onFacets: (ministries: string[]) => void;
   reloadToken: number;          // 등록·수정·불러오기 뒤 목록을 다시 받게 하는 값
 }
 
 export default function Announcements({
-  settings, onSettings, onModal, onEditAnn, onFacets, reloadToken,
+  settings, onSettings, onModal, onEditAnn, onToProject, onFacets, reloadToken,
 }: Props) {
   const f = settings.ann_filter;
   const [data, setData] = useState<AnnPage | null>(null);
@@ -281,6 +283,7 @@ export default function Announcements({
               <div className="ann-acts">
                 <button type="button" className={"star" + (a.fav ? " on" : "")}
                         onClick={() => toggleFav(a)}>{a.fav ? "★ 관심" : "☆ 관심"}</button>
+                <button type="button" className="mini-btn" onClick={() => onToProject(a)}>사업 등록</button>
                 <button type="button" className="mini-btn" onClick={() => onEditAnn(a)}>수정</button>
                 <button type="button" className="mini-btn danger" onClick={() => removeAnn(a)}>삭제</button>
               </div>

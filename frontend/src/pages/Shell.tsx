@@ -7,7 +7,7 @@ import { api } from "../lib/api";
 import type { AppSettings, ProjectDetail, ProjectSummary } from "../lib/types";
 import Dashboard from "./Dashboard";
 import Home from "./Home";
-import Register from "./Register";
+import Register, { type Prefill } from "./Register";
 import Announcements from "./Announcements";
 import AnnForm from "../components/AnnForm";
 import type { Ann } from "../lib/annApi";
@@ -36,6 +36,8 @@ export default function Shell() {
   const [annForm, setAnnForm] = useState<{ ann: Ann | null } | null>(null);
   const [annReload, setAnnReload] = useState(0);
   const [annMinistries, setAnnMinistries] = useState<string[]>([]);
+  // 공고에서 [사업 등록] 을 눌렀을 때 등록 화면에 옮겨 넣을 값
+  const [prefill, setPrefill] = useState<Prefill | null>(null);
 
   // 첫 화면에 필요한 것을 한 번에 받아 둡니다.
   // 달력에 할 일 기한을 표시하려면 사업별 상세가 필요합니다.
@@ -104,7 +106,7 @@ export default function Shell() {
         view={view}
         currentId={currentId}
         manualUrl={settings?.manual_url.url ?? ""}
-        onGo={go}
+        onGo={(v, id) => { if (v === "register") setPrefill(null); go(v, id); }}
         onEditManual={() => setManualDraft(settings?.manual_url.url ?? "")}
       />
 
@@ -148,9 +150,11 @@ export default function Shell() {
         {view === "register" && (
           <Register
             editing={editingProjectId ? details[editingProjectId] ?? null : null}
+            prefill={prefill}
             onSaved={(saved, msg, sub) => {
               applyProject(saved);
               setEditingProjectId(null);
+              setPrefill(null);
               go("dash", saved.id);
               openModal(msg, sub);
             }}
@@ -169,6 +173,7 @@ export default function Shell() {
             onCancel={() => {
               const id = editingProjectId;
               setEditingProjectId(null);
+              setPrefill(null);
               if (id) go("dash", id); else go("home");
             }}
             onModal={openModal}
@@ -181,6 +186,21 @@ export default function Shell() {
             onSettings={setSettings}
             onModal={openModal}
             onEditAnn={(a) => setAnnForm({ ann: a })}
+            onToProject={(a) => {
+              /* 공고를 '내 사업'으로 옮깁니다.
+                 공고 목록에는 사업 기간·추진과제가 없으므로 채울 수 있는 것만
+                 채우고, 나머지는 사람이 적도록 안내합니다. */
+              setEditingProjectId(null);
+              setPrefill({
+                name: a.title,
+                agency: [a.ministry, a.agency].filter(Boolean).join(" · "),
+                budget: a.amount
+                  ? (a.amount / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 2 })
+                  : "",
+              });
+              go("register");
+              openModal("공고 정보를 옮겼습니다", "사업 기간과 추진과제를 채워 등록하세요.");
+            }}
             onFacets={setAnnMinistries}
             reloadToken={annReload}
           />
