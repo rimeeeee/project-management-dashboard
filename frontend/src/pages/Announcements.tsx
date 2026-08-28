@@ -6,9 +6,10 @@
 
    NTIS 통합공고를 붙이면 전 부처라 수천 건이 됩니다. 그만큼을 브라우저로
    내려보낼 수 없어 한 쪽씩(기본 40건) 받습니다. */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Pager from "../components/Pager";
 import { annApi, type Ann, type AnnPage, type CollectorStatus } from "../lib/annApi";
+import { describeCron } from "../lib/cron";
 import { fmtEok } from "../lib/format";
 import type { AppSettings } from "../lib/types";
 import "../styles/pager.css";
@@ -78,10 +79,25 @@ export default function Announcements({
   // 조건·탭·검색을 바꾸면 1쪽으로 돌아갑니다
   useEffect(() => { setPage(1); }, [tab, query, sort, size, f.ministries, f.amount, f.include]);
 
+  /* 쪽을 넘기면 목록 맨 위부터 보이게 올려 줍니다.
+     쪽 번호가 목록 아래에 있어서, 누른 자리에 그대로 있으면 새 목록의 끝을
+     보고 있게 됩니다.
+
+     여기서 바로 올리면 안 됩니다. 새 목록을 아직 그리기 전이라 화면 길이가
+     바뀌면서 이동이 취소됩니다(실제로 그렇게 안 올라갔습니다).
+     그래서 새 목록이 그려진 뒤에 올립니다. */
+  const scrollAfterLoad = useRef(false);
+
   function goPage(p: number) {
+    scrollAfterLoad.current = true;
     setPage(p);
-    document.getElementById("annTop")?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
+
+  useEffect(() => {
+    if (!data || !scrollAfterLoad.current) return;
+    scrollAfterLoad.current = false;
+    window.scrollTo({ top: 0 });
+  }, [data]);
 
   async function saveFilter(next: Partial<AppSettings["ann_filter"]>) {
     const body = { include: f.include, ministries: f.ministries, amount: f.amount, ...next };
@@ -141,7 +157,9 @@ export default function Announcements({
           <span style={{ color: "var(--crit-ink)" }}>· {실패.map((s) => s.name).join(", ")} 실패</span>
         )}
         <span style={{ color: "var(--muted)" }}>
-          · 자동 수집 {collector?.enabled ? `켜짐 (${collector.cron})` : "꺼짐"}
+          · 자동 수집 {collector?.enabled
+            ? describeCron(collector.cron)
+            : "꺼짐 — [지금 수집]으로만 받습니다"}
         </span>
         <span className="spacer" />
         <button type="button" className="mini-btn" onClick={runCollector} disabled={busy}>
@@ -235,10 +253,6 @@ export default function Announcements({
       </div>
 
       {err && <div className="form-err on">{err}</div>}
-
-      {/* 목록이 길어 아래까지 내려간 뒤 다시 맨 위로 올라오지 않아도 되도록
-          쪽 번호를 위·아래 양쪽에 둡니다 */}
-      {data && <Pager page={data.page} pages={data.pages} onGo={goPage} />}
 
       <div className="ann-grid" id="annGrid">
         {data?.items.length ? data.items.map((a) => (

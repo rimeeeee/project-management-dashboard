@@ -29,6 +29,9 @@ AMOUNT_RANGES: dict[str, tuple[int, float]] = {
     "gte5": (5e8, float("inf")),
 }
 
+# 부처 칩에서 맨 뒤로 보낼 이름 (특정 부처가 아니라 묶음 이름입니다)
+LAST_CHIPS = {"기타", "출처 미상"}
+
 # 마감 임박순에서 묶음 순서
 STATUS_RANK = {"open": 0, "upcoming": 1, "unknown": 2, "closed": 3}
 
@@ -124,9 +127,11 @@ def facets(db: Session, q: Query) -> dict[str, Any]:
         select(Announcement.ministry, func.count())
         .where(*_base_filters(mq))
         .group_by(Announcement.ministry)
-        .order_by(func.count().desc())
     ).all()
     ministries = [{"name": m or "출처 미상", "count": c} for m, c in rows]
+    # 가나다순으로 늘어놓되, '기타'처럼 묶음 이름인 것은 맨 뒤로 보냅니다.
+    # 건수 많은 순으로 두면 수집할 때마다 칩 자리가 바뀌어 찾기 어렵습니다.
+    ministries.sort(key=lambda x: (x["name"] in LAST_CHIPS, x["name"]))
 
     # 탭 건수는 상태 판정이 필요해 파이썬에서 셉니다
     now = datetime.now(KST)

@@ -190,3 +190,22 @@ def test_직접_등록한_공고는_수집이_덮어쓰지_않는다(client, see
     assert got["title"] == "손으로 고친 제목"
     assert got["amount"] == 500_000_000
     assert got["contact"] == "02-000-0000"
+
+
+def test_부처_칩은_가나다순이고_기타가_맨_뒤다(client, db):
+    """
+    건수 많은 순으로 두면 수집할 때마다 칩 자리가 바뀌어 찾기 어렵습니다.
+    """
+    import datetime
+
+    today = datetime.date.today()
+    for i, m in enumerate(["기타", "해양수산부", "과학기술정보통신부", "경찰청", "산업통상부"]):
+        db.add(Announcement(
+            id=f"m{i}", title=f"{m} 공고", ministry=m, agency=m,
+            posted=today, open_from=today, due=today + datetime.timedelta(days=10),
+            amount=0, url=f"https://example.test/m{i}", source="ntis-rss",
+        ))
+    db.commit()
+
+    names = [m["name"] for m in client.get(f"{A}?size=1").json()["facets"]["ministries"]]
+    assert names == ["경찰청", "과학기술정보통신부", "산업통상부", "해양수산부", "기타"]

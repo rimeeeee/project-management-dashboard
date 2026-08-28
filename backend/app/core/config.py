@@ -40,7 +40,7 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173"
 
-    collector_enabled: bool = True
+    collector_enabled: bool = False
     collector_cron: str = "0 6 * * 1,4"
 
     @property
