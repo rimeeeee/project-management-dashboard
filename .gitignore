@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 환경변수 — 비밀번호 해시·비밀키가 들어가므로 절대 커밋하지 않습니다
+.env
+
+# 로컬 개발용 데이터베이스 파일
+*.db
+*.sqlite3
+data/
+
+# Node
+node_modules/
+frontend/dist/
+
+# 수집기가 남기는 진단 파일
+debug_*.html
+debug_*.xml
+
+# macOS
+.DS_Store

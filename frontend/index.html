@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="description" content="사업 진척률·예산 집행·성과지표·확인사항을 회차별 입력으로 관리하는 병원 사업관리 대시보드">
+<title>사업관리 대시보드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<script>
+/* 화면 테마 복원 — 프로토타입의 restoreTheme() 을 그대로 옮긴 것입니다.
+   React 가 그려지기 전에 먼저 실행되어야 합니다. 나중에 실행하면 새로고침할 때마다
+   밝은 화면이 한 번 번쩍이고 나서 어두워집니다. 그래서 여기 인라인으로 둡니다.
+   저장 키도 프로토타입과 같은 것을 씁니다 — 쓰던 분의 테마 설정이 그대로 이어집니다. */
+(function restoreTheme(){
+  var STORE_KEY = "bizDash.v3";
+  var saved = null;
+  try{ saved = localStorage.getItem(STORE_KEY + ".theme"); }catch(e){}
+  if(saved){
+    document.documentElement.setAttribute("data-theme", saved);
+  }else if(!document.documentElement.getAttribute("data-theme")){
+    document.documentElement.setAttribute("data-theme", "dark");   // 기본값: 어두운 화면
+  }
+})();
+</script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+/* 로그인 화면.
+   프로토타입에 없던 유일한 새 화면이라, 색·글씨 크기는 새로 정하지 않고
+   프로토타입의 변수(--surface, --accent, --line …)와 기존 클래스(.card,
+   .btn-primary, .f, .form-err)를 그대로 씁니다. 그래야 로그인하고 들어갔을 때
+   화면이 바뀐 느낌이 들지 않습니다. */
+
+.login-wrap{
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background:var(--bg); padding:24px;
+}
+.login-box{width:100%; max-width:420px}
+
+/* 제목 — .page-title(22.4px)보다 한 단계 크게. 이 화면에는 이것 하나뿐입니다. */
+.login-title{font-size:26px; font-weight:700; letter-spacing:-.3px; text-align:center}
+.login-sub{
+  font-size:15px; color:var(--muted); text-align:center;
+  margin-top:6px; margin-bottom:22px;
+}
+
+.login-box .card{padding:26px}
+.login-box .f{display:flex; flex-direction:column; gap:6px}
+
+/* 비밀번호 칸은 이 화면의 주인공이라 조금 더 크고 높게 잡습니다.
+   50~60대가 보기 편하도록 키운 본문 크기(16.8px)보다 작아지면 안 됩니다. */
+.login-box input[type="password"]{padding:12px 14px; font-size:17.4px}
+
+/* '로그인 유지' — 체크박스는 기본 크기가 작아서 누르기 어렵습니다.
+   글자까지 통째로 누를 수 있게 label 로 감싸고 크기를 키웁니다. */
+.login-remember{
+  display:flex; align-items:center; gap:9px;
+  margin-top:14px; font-size:15px; color:var(--ink-2); cursor:pointer;
+  user-select:none;
+}
+.login-remember input{width:19px; height:19px; accent-color:var(--accent); cursor:pointer}
+
+.login-box .btn-primary:disabled{opacity:.6; cursor:default}
+
+/* 오류 문구는 화면 가운데 정렬된 폼 안에서 왼쪽 정렬로 두어야 읽기 편합니다 */
+.login-box .form-err{margin-top:12px}
+
+/* .env 에 비밀번호를 설정하지 않은 상태 알림 */
+.login-notice{
+  margin-top:16px; padding:11px 14px; border-radius:9px;
+  background:var(--warn-bg); color:var(--warn-ink);
+  font-size:14.4px; line-height:1.5;
+}
+.login-notice code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  background:rgba(0,0,0,.07); border-radius:4px; padding:1px 5px;
+}
+
+.login-foot{
+  margin-top:18px; text-align:center; font-size:13.8px; color:var(--muted);
+}
+.login-foot button{text-decoration:underline; color:var(--muted)}
+.login-foot button:hover{color:var(--ink-2)}

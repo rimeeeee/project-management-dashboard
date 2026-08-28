@@ -1,0 +1,507 @@
+/* =====================================================================
+   프로토타입(사업관리_대시보드_4.html)의 <style> 두 블록을 그대로 옮긴 것입니다.
+   글씨 크기·색·간격은 실무 검토를 거쳐 확정된 값이므로 임의로 고치지 마세요.
+   특히 16.8px/17.4px 같은 소수점 크기는 의도된 값입니다(반올림 금지).
+   ===================================================================== */
+
+/* --- minimal reset (단독 HTML 파일 실행용) --- */
+*,*::before,*::after{box-sizing:border-box}
+img,svg{display:block;max-width:100%}
+button,input,select,textarea{font-family:inherit;font-size:inherit}
+
+:root{
+  --bg:#f3f6f6; --surface:#ffffff; --surface-2:#f0f4f4; --ink:#152228; --ink-2:#4e626b;
+  --muted:#7d8f96; --line:#e1e8e9; --line-strong:#cdd8da;
+  --accent:#0c7489; --accent-deep:#075b6d; --accent-soft:#ddedf0; --accent-ink:#0a5d6e;
+  --track:#dcebee;
+  --good-bg:#e2f3e2; --good-ink:#116b11; --good-dot:#0ca30c;
+  --warn-bg:#fcefcf; --warn-ink:#7d5300; --warn-dot:#e0a112;
+  --crit-bg:#fae2e2; --crit-ink:#9c2424; --crit-dot:#d03b3b;
+  --shadow:0 1px 2px rgba(21,34,40,.05),0 4px 14px rgba(21,34,40,.05);
+  --btn-ink:#ffffff; --scrim:rgba(21,34,40,.42);
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1315; --surface:#171f22; --surface-2:#1e282b; --ink:#edf3f4; --ink-2:#a9bcc1;
+    --muted:#71858b; --line:#243135; --line-strong:#314348;
+    --accent:#3aa7bd; --accent-deep:#5cc0d4; --accent-soft:#11333c; --accent-ink:#7fd0e0;
+    --track:#1c3a42;
+    --good-bg:#12310f; --good-ink:#7fdc7f; --good-dot:#0ca30c;
+    --warn-bg:#3a2d07; --warn-ink:#f2c860; --warn-dot:#fab219;
+    --crit-bg:#3d1414; --crit-ink:#f09090; --crit-dot:#e05b5b;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+    --btn-ink:#06272e; --scrim:rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1315; --surface:#171f22; --surface-2:#1e282b; --ink:#edf3f4; --ink-2:#a9bcc1;
+  --muted:#71858b; --line:#243135; --line-strong:#314348;
+  --accent:#3aa7bd; --accent-deep:#5cc0d4; --accent-soft:#11333c; --accent-ink:#7fd0e0;
+  --track:#1c3a42;
+  --good-bg:#12310f; --good-ink:#7fdc7f; --good-dot:#0ca30c;
+  --warn-bg:#3a2d07; --warn-ink:#f2c860; --warn-dot:#fab219;
+  --crit-bg:#3d1414; --crit-ink:#f09090; --crit-dot:#e05b5b;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+  --btn-ink:#06272e; --scrim:rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  font-size:16.8px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;width:100%}
+input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+a{color:inherit;text-decoration:none}
+/* 글씨를 키운 만큼 사이드바도 넓혀 사업명이 두 줄로 접히지 않게 합니다 */
+.app{display:grid;grid-template-columns:274px 1fr;min-height:100vh}
+
+/* ---------- sidebar ---------- */
+.sidebar{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand .t{font-size:17.9px;font-weight:700;letter-spacing:-.2px}
+.brand{padding:2px 8px}
+.nav-label{font-size:13.2px;font-weight:600;color:var(--muted);letter-spacing:.08em;padding:0 8px;margin-bottom:6px;text-transform:uppercase}
+.nav-group{display:flex;flex-direction:column;gap:2px}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;text-align:left;color:var(--ink-2);font-weight:500;width:100%;cursor:pointer}
+.nav-btn:hover{background:var(--surface-2)}
+.nav-btn.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.nav-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.nav-btn .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-btn svg{flex:none}
+/* 사업 매뉴얼 — 외부 링크 표시와 주소 변경 버튼 */
+.nav-ext{font-size:13.2px;color:var(--muted);flex:none}
+.nav-row{display:flex;align-items:center;gap:2px}
+.nav-row .nav-btn{flex:1;min-width:0}
+.nav-edit{flex:none;color:var(--muted);font-size:13.2px;padding:5px 7px;border-radius:6px;
+  opacity:0;transition:opacity .12s}
+.nav-row:hover .nav-edit,.nav-row:focus-within .nav-edit{opacity:1}
+.nav-edit:hover{background:var(--line);color:var(--ink)}
+@media(hover:none){.nav-edit{opacity:1}}
+.dot.g{background:var(--good-dot)} .dot.w{background:var(--warn-dot)} .dot.c{background:var(--crit-dot)}
+.sidebar .foot{margin-top:auto;padding:10px 8px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.btn-ghost{border:1px solid var(--line-strong);border-radius:8px;padding:7px 10px;font-size:15px;color:var(--ink-2);text-align:center}
+.btn-ghost:hover{background:var(--surface-2)}
+
+/* ---------- main ---------- */
+.main{padding:22px 26px 40px;min-width:0}
+.view{display:none}
+.view.on{display:block}
+.proj-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-bottom:16px}
+.proj-head h1{font-size:23.5px;font-weight:700;letter-spacing:-.3px;text-wrap:balance}
+/* 발주처·기간·총사업비가 적히는 줄. 흐린 회색이라 잘 안 보인다는 의견이 있어
+   본문 색으로 올리고 글자도 한 단계 더 키웠습니다. */
+.proj-head .meta{font-size:19px;color:var(--ink-2);font-weight:500;margin-top:6px;display:flex;flex-wrap:wrap;gap:4px 20px}
+.proj-head .right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* 상태 배지 — 글자는 항상 배지 정중앙 */
+.pill{display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;border-radius:99px;padding:4px 12px;min-width:86px;text-align:center;line-height:1.5;white-space:nowrap}
+.pill.g{background:var(--good-bg);color:var(--good-ink)}
+.pill.w{background:var(--warn-bg);color:var(--warn-ink)}
+.pill.c{background:var(--crit-bg);color:var(--crit-ink)}
+
+.dash-wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.dash-wrap .panel{display:none}
+.dash-wrap.open{grid-template-columns:minmax(0,1fr) 356px}
+.dash-wrap.open .panel{display:block}
+@media(max-width:1180px){.dash-wrap.open{grid-template-columns:1fr}}
+.btn-toggle{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-strong);border-radius:9px;padding:7px 14px;font-size:15.6px;font-weight:600;color:var(--ink-2);background:var(--surface)}
+.btn-toggle:hover{background:var(--surface-2)}
+.btn-toggle.on{background:var(--accent);border-color:var(--accent);color:var(--btn-ink)}
+.btn-toggle .sw{width:26px;height:15px;border-radius:99px;background:var(--line-strong);position:relative;flex:none;transition:.2s}
+.btn-toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--surface);transition:.2s}
+.btn-toggle.on .sw{background:rgba(255,255,255,.35)}
+.btn-toggle.on .sw::after{left:13px;background:var(--btn-ink)}
+
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;min-width:0}
+@media(max-width:860px){.dash-grid{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px}
+.card.span2{grid-column:1/-1}
+.card h2{font-size:15.6px;font-weight:600;color:var(--ink-2);display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.card h2 .hint{margin-left:auto;font-size:13.8px;font-weight:500;color:var(--muted)}
+
+/* 상단 요약 밴드 */
+.band{display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+.band .cap{font-size:14.4px;color:var(--muted);margin-bottom:2px}
+/* 이 화면에서 가장 먼저 봐야 할 숫자입니다.
+   색은 계획 대비 상태를 그대로 따릅니다(정상 초록 / 점검 노랑 / 조치 빨강). */
+.band .n{font-size:48.3px;font-weight:700;letter-spacing:-1.5px;line-height:1;color:var(--good-ink)}
+.band .n.w{color:var(--warn-ink)}
+.band .n.c{color:var(--crit-ink)}
+.band .u{font-size:21.3px;font-weight:600;color:var(--muted)}
+.band .stats{display:flex;gap:26px;flex-wrap:wrap;margin-left:auto}
+.stat{min-width:78px}
+.stat .k{font-size:13.8px;color:var(--muted)}
+.stat .v{font-size:21.3px;font-weight:600;margin-top:1px;font-variant-numeric:tabular-nums}
+.stat .v.up{color:var(--good-ink)} .stat .v.dn{color:var(--crit-ink)}
+.bandbar{margin-top:18px;position:relative;padding-top:30px}
+.bandbar .track{position:relative;height:16px;border-radius:8px;background:var(--track);overflow:visible}
+/* 게이지도 숫자와 같은 색을 씁니다 */
+.bandbar .fill{position:absolute;top:0;bottom:0;left:0;background:var(--good-dot);border-radius:8px 5px 5px 8px;transition:width .5s ease,background .3s}
+.bandbar .fill.w{background:var(--warn-dot)}
+.bandbar .fill.c{background:var(--crit-dot)}
+.bandbar .tick{position:absolute;top:-6px;bottom:-6px;width:3px;background:var(--ink);border-radius:2px;box-shadow:0 0 0 2px var(--surface)}
+.bandbar .tick-lbl{position:absolute;top:0;transform:translateX(-50%);font-size:13.2px;font-weight:600;color:var(--ink);background:var(--surface-2);border:1px solid var(--line-strong);border-radius:5px;padding:1px 7px;white-space:nowrap}
+.bandbar .ends{display:flex;justify-content:space-between;font-size:13.8px;color:var(--muted);margin-top:10px}
+
+/* stage */
+.stages{display:flex;gap:4px}
+.stage{flex:1;text-align:center}
+.stage .seg{height:12px;border-radius:4px;background:var(--track)}
+.stage.done .seg{background:var(--accent)}
+.stage.now .seg{background:var(--accent);opacity:.55}
+.stage .nm{font-size:13.8px;color:var(--muted);margin-top:6px}
+.stage.done .nm,.stage.now .nm{color:var(--accent-ink);font-weight:600}
+/* 단계별 진행 내용 */
+.stagelist{display:flex;flex-direction:column;gap:2px;margin-top:18px}
+.stagerow{display:grid;grid-template-columns:60px 1fr;gap:10px;padding:8px 10px;border-radius:7px;font-size:15.6px;align-items:baseline}
+.stagerow .nm{color:var(--muted);font-weight:500}
+.stagerow .tx{color:var(--ink-2);line-height:1.5}
+.stagerow.done .nm{color:var(--accent-ink)}
+.stagerow.now{background:var(--accent-soft)}
+.stagerow.now .nm{color:var(--accent-ink);font-weight:700}
+.stagerow.now .tx{color:var(--ink);font-weight:500}
+.stagerow .tx.empty{color:var(--muted)}
+/* 입력 패널 — 단계별 내용 */
+.stage-in{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:8px;margin-bottom:6px}
+.stage-in .nm{font-size:15px;color:var(--ink-2)}
+.stage-in.now .nm{color:var(--accent-ink);font-weight:700}
+.stage-in input{padding:6px 8px}
+
+/* budget */
+.money-line{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.money-line .big{font-size:31.5px;font-weight:700;letter-spacing:-.5px}
+.money-line .of{font-size:16.8px;color:var(--muted)}
+.money-line .pill{margin-left:auto;align-self:center}
+.meter{margin-top:12px}
+.meter .track{height:12px;border-radius:6px;background:var(--track);position:relative;overflow:hidden}
+.meter .fill{position:absolute;inset:0 auto 0 0;border-radius:6px 4px 4px 6px;background:var(--accent);transition:width .5s ease}
+.meter .lbls{display:flex;justify-content:space-between;font-size:13.8px;color:var(--muted);margin-top:7px;font-variant-numeric:tabular-nums}
+.minirow{display:flex;gap:22px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.minirow .stat .v{font-size:17.9px}
+/* 대시보드 맨 아래 — 공유폴더 바로가기 */
+.dash-foot{display:flex;justify-content:center}
+.folder-link{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line-strong);
+  border-radius:10px;padding:10px 16px;font-size:15px;font-weight:600;color:var(--ink-2);background:var(--surface)}
+.folder-link:hover{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent)}
+.folder-link.off{color:var(--muted);font-weight:500;cursor:pointer}
+.cat-rows{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.cat-head{display:flex;align-items:baseline;gap:8px;font-size:13.2px;color:var(--muted);margin-bottom:2px}
+.cat-row{display:grid;grid-template-columns:104px 1fr 92px;align-items:center;gap:10px;font-size:14.4px}
+.cat-row .nm{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 막대에 마우스를 올리거나 누르면 '사용 / 배정'이 위에 뜹니다 */
+.cat-row .bar{height:12px;border-radius:6px;background:var(--track);position:relative;cursor:pointer}
+.cat-row .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);opacity:.85;border-radius:6px}
+.cat-row .bar.over i{background:var(--crit-dot);opacity:.9}
+.cat-row .bar .tip{
+  position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+  background:var(--ink); color:var(--surface); font-size:13.2px; font-weight:600;
+  border-radius:7px; padding:5px 10px; white-space:nowrap; pointer-events:none;
+  opacity:0; transition:opacity .12s; z-index:5; font-variant-numeric:tabular-nums;
+}
+.cat-row .bar:hover .tip,.cat-row .bar.on .tip{opacity:1}
+.cat-row .v{text-align:right;color:var(--ink-2);font-weight:600;font-variant-numeric:tabular-nums}
+.cat-row .v.none{color:var(--muted);font-weight:400}
+.cat-row .v.link{text-decoration:underline;text-underline-offset:3px;font-size:13.8px}
+.cat-row .v.link:hover{color:var(--accent-ink)}
+
+/* kpi */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 18px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .nm{font-size:15px;color:var(--ink-2);font-weight:500;display:flex;align-items:center;gap:6px}
+.kpi .nm .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpi .val{font-size:22.4px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .val small{font-size:14.4px;color:var(--muted);font-weight:500}
+.kpi .track{height:8px;border-radius:4px;background:var(--track);margin-top:8px;position:relative;overflow:hidden}
+.kpi .fill{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--accent)}
+.kpi .pct{font-size:13.8px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
+
+/* issues + log */
+.issue{border-left:3px solid var(--warn-dot);background:var(--surface-2);border-radius:6px;padding:10px 12px;margin-bottom:8px}
+.issue.done{border-left-color:var(--good-dot);opacity:.72}
+.issue .ihead{display:flex;align-items:flex-start;gap:10px}
+.issue .ihead .t{flex:1;min-width:0}
+.issue.done .t{text-decoration:line-through;color:var(--muted)}
+.issue .t{font-size:15.6px;font-weight:600}
+.issue-sep{font-size:13.8px;color:var(--muted);margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--line)}
+.tag-done{font-size:12.6px;font-weight:600;color:var(--good-ink);background:var(--good-bg);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.issue .a{font-size:15px;color:var(--ink-2);margin-top:3px}
+.issue .a b{font-weight:600;color:var(--muted);font-size:13.8px}
+.issue .d{font-size:13.2px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.empty{font-size:15.6px;color:var(--muted);padding:6px 0}
+
+/* 입력 내역 표 */
+.tbl-wrap{overflow-x:auto}
+table.tbl{width:100%;border-collapse:collapse;font-size:15px;min-width:1050px}
+table.tbl th{text-align:left;font-weight:600;color:var(--muted);font-size:13.8px;padding:0 10px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+table.tbl td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top}
+table.tbl tr:last-child td{border-bottom:none}
+table.tbl td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.tbl th.num{text-align:right}
+table.tbl td.act{color:var(--ink)}
+.rowbtns{display:flex;gap:6px;justify-content:flex-end;white-space:nowrap}
+.mini-btn{border:1px solid var(--line-strong);border-radius:6px;padding:3px 9px;font-size:13.8px;color:var(--ink-2)}
+.mini-btn:hover{background:var(--surface-2)}
+/* 전체 화면 달력 — 화면을 거의 다 쓰고, 날짜 칸이 남는 높이를 나눠 갖습니다 */
+#calScrim{z-index:65;padding:24px}
+.modal.cal-full{max-width:1240px;width:100%;max-height:92vh;text-align:left;
+  padding:20px 22px 18px;overflow-y:auto}
+.cal-full-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.cal-full-head h3{font-size:19px;font-weight:700}
+.cal-close{margin-left:auto;width:38px;height:38px;border:1px solid var(--line-strong);
+  border-radius:9px;font-size:22px;line-height:1;color:var(--ink-2)}
+.cal-close:hover{background:var(--surface-2)}
+@media(max-width:760px){.modal.cal-full{padding:16px 14px}}
+.mini-btn.danger:hover{background:var(--crit-bg);color:var(--crit-ink);border-color:var(--crit-ink)}
+
+/* ---------- input panel ---------- */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;position:sticky;top:22px}
+.panel h2{font-size:16.8px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.panel h2 .badge{font-size:12.6px;font-weight:600;background:var(--accent-soft);color:var(--accent-ink);border-radius:99px;padding:2px 8px}
+.panel h2 .badge.edit{background:var(--warn-bg);color:var(--warn-ink)}
+.panel .sec{margin-top:16px}
+.panel .sec>.cap{font-size:14.4px;font-weight:600;color:var(--ink-2);margin-bottom:8px;display:flex;align-items:baseline;gap:6px}
+.panel .sec>.cap .h{font-weight:400;color:var(--muted);font-size:13.2px;margin-left:auto}
+.chk{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:7px;font-size:15.6px;color:var(--ink-2);cursor:pointer}
+.chk:hover{background:var(--surface-2)}
+.chk input{width:15px;height:15px;accent-color:var(--accent);flex:none}
+.chk.done span{color:var(--muted);text-decoration:line-through}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* 집행액 — 한 회차에 비목별 여러 건 */
+.spend-row{display:grid;grid-template-columns:116px minmax(0,1fr) 28px;gap:6px;align-items:center;margin-bottom:6px}
+.spend-row input{padding:7px 8px;text-align:right;font-variant-numeric:tabular-nums}
+.spend-row select{padding:7px 8px}
+.spend-row .rm{color:var(--muted);font-size:18px;border-radius:6px;height:30px}
+.spend-row .rm:hover{background:var(--crit-bg);color:var(--crit-ink)}
+.spend-sum{font-size:14.4px;color:var(--ink-2);text-align:right;margin-top:8px;font-variant-numeric:tabular-nums}
+.spend-sum b{font-weight:600}
+.kpi-in{display:grid;grid-template-columns:minmax(0,1fr) 88px;align-items:center;gap:8px;margin-bottom:6px}
+.kpi-in .nm{font-size:15px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpi-in input{padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums}
+.btn-primary{background:var(--accent);color:var(--btn-ink);font-weight:600;border-radius:9px;padding:11px;width:100%;margin-top:16px}
+.btn-primary:hover{background:var(--accent-deep)}
+.btn-cancel{margin-top:8px;width:100%;border:1px solid var(--line-strong);border-radius:9px;padding:9px;font-size:15.6px;color:var(--ink-2);display:none}
+.btn-cancel.on{display:block}
+.btn-cancel:hover{background:var(--surface-2)}
+.form-err{font-size:14.4px;color:var(--crit-ink);margin-top:8px;display:none}
+.form-err.on{display:block}
+
+/* ---------- register ---------- */
+.reg-wrap{max-width:820px}
+.reg-wrap .card{margin-bottom:16px}
+.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.f-grid{grid-template-columns:1fr}}
+.f{display:flex;flex-direction:column;gap:5px}
+.f label{font-size:14.4px;font-weight:600;color:var(--ink-2)}
+.f .help{font-size:13.8px;color:var(--muted)}
+.dyn-row{display:grid;grid-template-columns:minmax(0,1fr) 110px 90px 32px;gap:8px;margin-bottom:8px;align-items:center}
+.dyn-row.task{grid-template-columns:minmax(0,1fr) 32px}
+/* 비목 줄: 비목명 + 배정액(원) + 삭제 */
+.dyn-row.cat{grid-template-columns:minmax(0,1fr) 180px 32px}
+@media(max-width:700px){.dyn-row.cat{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.dyn-row{grid-template-columns:1fr 1fr;}.dyn-row .rm{grid-column:2}}
+.dyn-row .rm{color:var(--muted);font-size:17.9px;border-radius:6px;height:32px}
+.dyn-row .rm:hover{background:var(--crit-bg);color:var(--crit-ink)}
+.btn-add{border:1px dashed var(--line-strong);border-radius:8px;padding:7px 12px;font-size:15px;color:var(--ink-2);width:100%}
+.btn-add:hover{border-color:var(--accent);color:var(--accent-ink)}
+
+/* ---------- announcements ---------- */
+.ann-note{display:flex;align-items:center;gap:8px;background:var(--accent-soft);color:var(--accent-ink);border-radius:9px;padding:9px 14px;font-size:15px;margin-bottom:16px}
+.filter-card{margin-bottom:16px}
+.filter-card h2 .hint{margin-left:auto}
+.filter-grid{display:grid;grid-template-columns:1fr 240px;gap:12px}
+@media(max-width:820px){.filter-grid{grid-template-columns:1fr}}
+.filter-card .f label small{font-weight:400;color:var(--muted);margin-left:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line-strong);border-radius:99px;padding:5px 12px;font-size:15px;color:var(--ink-2)}
+.chip:hover{background:var(--surface-2)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--btn-ink);font-weight:600}
+.ann-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.tabs{display:flex;gap:4px;background:var(--surface-2);border-radius:9px;padding:3px}
+.tab{padding:6px 14px;border-radius:7px;font-size:15px;font-weight:500;color:var(--ink-2)}
+.tab.on{background:var(--surface);color:var(--accent-ink);font-weight:600;box-shadow:var(--shadow)}
+.ann-q{max-width:220px;margin-left:auto}
+.ann-sort{max-width:150px}
+.ann-count{font-size:15px;color:var(--muted);margin-bottom:12px}
+.ann-count b{color:var(--ink-2);font-weight:600}
+.kw-row{display:flex;flex-wrap:wrap;gap:5px}
+.kw{font-size:13.2px;font-weight:600;color:var(--accent-ink);background:var(--accent-soft);border-radius:4px;padding:1px 7px}
+.ann-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.star{border:1px solid var(--line-strong);border-radius:6px;padding:3px 9px;font-size:13.8px;color:var(--muted)}
+.star:hover{background:var(--surface-2)}
+.star.on{background:var(--warn-bg);border-color:var(--warn-dot);color:var(--warn-ink);font-weight:600}
+/* 공고 제목이 길어 카드가 좁으면 서너 줄로 접힙니다. 넓게 잡아 한 줄에 2장 정도. */
+.ann-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(560px,1fr));gap:16px}
+@media(max-width:1200px){.ann-grid{grid-template-columns:1fr}}
+.ann{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:10px;transition:.15s}
+.ann .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ann .src{font-size:13.2px;font-weight:600;color:var(--accent-ink);background:var(--accent-soft);border-radius:5px;padding:2px 7px}
+.ann .dday{margin-left:auto}
+.ann .st{font-size:13.2px;font-weight:600;border-radius:5px;padding:2px 7px}
+.st-open{background:var(--good-bg);color:var(--good-ink)}
+.st-upcoming{background:var(--accent-soft);color:var(--accent-ink)}
+.st-closed{background:var(--surface-2);color:var(--muted)}
+.st-unknown{background:var(--surface-2);color:var(--ink-2);border:1px dashed var(--line-strong)}
+.dday{font-size:14.4px;font-weight:700;font-variant-numeric:tabular-nums}
+.dday.open{color:var(--ink-2)} .dday.soon{color:var(--warn-ink)} .dday.closed{color:var(--muted)}
+.ann h3{font-size:17.4px;font-weight:600;line-height:1.45;text-wrap:balance}
+.ann h3 a:hover{color:var(--accent-ink);text-decoration:underline}
+.ann .score{font-size:13.2px;color:var(--muted)}
+/* 카드가 넓어졌으므로 항목을 세로로 쌓지 않고 가로로 늘어놓습니다.
+   좁은 화면에서는 자동으로 두 줄, 한 줄로 접힙니다. */
+.ann .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px 22px;font-size:15px}
+.ann .kv>div{min-width:0}
+.ann .kv .k{display:block;color:var(--muted);font-size:13.8px}
+.ann .kv .v{display:block;color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis}
+.ann .foot2{margin-top:auto;padding-top:10px;border-top:1px solid var(--line);display:flex;
+  align-items:center;gap:10px;flex-wrap:wrap;font-size:13.8px;color:var(--muted)}
+.ann .ann-acts{margin-left:auto}
+.ann .foot-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.src-tag{font-size:12.6px;font-weight:600;color:var(--accent-ink);border:1px solid var(--line-strong);border-radius:4px;padding:0 6px}
+.btn-add-ann{margin-left:auto;background:var(--accent);color:var(--btn-ink);font-weight:600;border-radius:8px;padding:6px 14px;font-size:15px;white-space:nowrap}
+.btn-add-ann:hover{background:var(--accent-deep)}
+.ann .go{color:var(--accent-ink);font-weight:600}
+
+/* ---------- modal ---------- */
+.scrim{position:fixed;inset:0;background:var(--scrim);display:none;place-items:center;z-index:60;padding:20px}
+.scrim.on{display:grid}
+/* 알림·확인 팝업은 백업 창 위에 떠야 합니다 */
+#scrim{z-index:70}
+.modal{background:var(--surface);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.25);padding:28px 26px 22px;width:100%;max-width:340px;text-align:center}
+.modal .ic{width:46px;height:46px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;margin:0 auto 14px}
+.modal .msg{font-size:18px;font-weight:600}
+.modal .sub{font-size:15px;color:var(--muted);margin-top:5px}
+.modal .acts{display:flex;gap:8px;margin-top:20px}
+.modal .acts button{flex:1;font-weight:600;border-radius:9px;padding:10px}
+.modal .ok{background:var(--accent);color:var(--btn-ink)}
+.modal .ok:hover{background:var(--accent-deep)}
+.modal .no{border:1px solid var(--line-strong);color:var(--ink-2)}
+.modal .no:hover{background:var(--surface-2)}
+.modal.form{max-width:620px;text-align:left;max-height:88vh;overflow-y:auto}
+.modal.form h3{font-size:17.9px;font-weight:700}
+.modal.form .sub-line{font-size:15px;color:var(--muted);margin:4px 0 16px}
+.modal.form .f-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.modal.form .f-grid{grid-template-columns:1fr}}
+.modal.form .acts{margin-top:18px}
+.modal.form textarea{height:200px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.8px;resize:vertical}
+.mini-btn.danger:hover{background:var(--crit-bg);color:var(--crit-ink);border-color:var(--crit-ink)}
+
+/* ---------- 전체 사업 현황 (메인) ---------- */
+.home-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
+
+/* ---------- 할 일 + 일정 달력 ---------- */
+
+/* 카드가 좁아도 글자가 잘리지 않게, 내용은 한 줄 통으로 쓰고 기한·추가를 아랫줄에 둡니다 */
+.todo-add{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:14px}
+.todo-add>#todoText{grid-column:1/-1}
+.todo-btn{width:auto;padding:9px 20px;white-space:nowrap}
+.todo{display:flex;align-items:flex-start;gap:11px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.todo:last-child{border-bottom:none}
+.todo input[type=checkbox]{width:20px;height:20px;flex:0 0 auto;margin-top:2px;accent-color:var(--accent)}
+.todo .tx{flex:1;font-size:15.6px;color:var(--ink);line-height:1.45}
+.todo .due{font-size:13.8px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.todo .due.soon{color:var(--crit-ink);font-weight:600}
+.todo.done .tx{color:var(--muted);text-decoration:line-through}
+.todo .rm{color:var(--muted);font-size:17.9px;line-height:1;padding:0 6px;border-radius:6px}
+.todo .rm:hover{background:var(--crit-bg);color:var(--crit-ink)}
+
+.cal-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cal-nav{width:32px;height:32px;border:1px solid var(--line-strong);border-radius:8px;font-size:17.9px;color:var(--ink-2);line-height:1}
+.cal-nav:hover{background:var(--surface-2)}
+/* 달 표시는 좌우 화살표 사이에서 가운데. 폭을 고정해 8월↔10월로 바뀌어도
+   화살표 위치가 흔들리지 않게 합니다. */
+.cal-title{font-size:17px;font-weight:700;min-width:132px;text-align:center}
+.cal-today{margin-left:auto}
+/* minmax(0,1fr) 이어야 긴 일정 이름 때문에 칸 폭이 벌어지지 않습니다 */
+.cal-dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;font-size:13.2px;color:var(--muted);text-align:center;margin-bottom:4px}
+.cal-dow span:first-child{color:var(--crit-ink)}
+/* 달력은 '주' 단위 줄로 쌓습니다. 형광펜 띠를 주마다 하나로 이어 그리기 위해서입니다. */
+.cal-grid{display:flex;flex-direction:column;gap:3px}
+.cal-week{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.cal-d{border:1px solid transparent;border-radius:8px;padding:5px 4px calc(10px + var(--runrows,0) * 7px);min-height:calc(42px + var(--runrows,0) * 7px);text-align:center;
+  font-size:14.4px;font-variant-numeric:tabular-nums;color:var(--ink-2);background:var(--surface-2)}
+.cal-d.out{background:transparent;color:var(--muted);opacity:.45}
+.cal-d.sun{color:var(--crit-ink)}
+.cal-d.today{border-color:var(--accent);font-weight:700;color:var(--accent-ink)}
+.cal-d.has{cursor:pointer}
+.cal-d.has:hover{border-color:var(--line-strong)}
+.cal-d.sel{border-color:var(--accent);background:var(--accent-soft)}
+.cal-dots{display:flex;justify-content:center;gap:3px;margin-top:4px;min-height:7px}
+.cal-dots i{width:7px;height:7px;border-radius:99px;display:block}
+/* 달력 범례 색은 서로 겹치면 안 되므로 테마 색을 쓰지 않고 고정값으로 둡니다.
+   시작=청록 / 종료=빨강 / 할 일=보라, 사업 띠는 이 셋과 다른 색만 씁니다(RUN_COLORS). */
+.k-start,.dot-start{background:#2fa1b8}
+.k-end,.dot-end{background:#d03b3b}
+.k-due,.dot-due{background:var(--warn-dot)}
+.k-todo,.dot-todo{background:#7c6ce0}
+/* 범례는 두 줄입니다. 윗줄은 표시 기호(시작·종료·할 일), 아랫줄은 사업별 띠 색.
+   한 줄에 섞으면 사업이 늘어날수록 기호가 뒤로 밀려 안 보입니다. */
+.cal-legend{margin-top:12px;font-size:13.2px;color:var(--muted)}
+.cal-legend .row{display:flex;flex-wrap:wrap;gap:6px 16px}
+/* 사업 목록은 한 줄에 하나씩. 이름이 길어 옆으로 이어 붙이면 어디까지가 한 사업인지
+   구분이 안 됩니다. */
+.cal-legend .row.runs{flex-direction:column;align-items:flex-start;gap:5px;
+  margin-top:7px;padding-top:7px;border-top:1px solid var(--line)}
+.cal-legend span{display:inline-flex;align-items:center;gap:6px}
+.cal-legend i{width:9px;height:9px;border-radius:99px;display:block}
+.cal-events{margin-top:12px}
+.cal-ev{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.cal-ev i{width:9px;height:9px;border-radius:99px;flex:0 0 auto;margin-top:6px}
+.cal-ev .d{color:var(--muted);font-variant-numeric:tabular-nums;flex:0 0 auto}
+/* 공고 제목이 길어도 한 줄만 차지하게 합니다 (전체 제목은 마우스를 올리면 보입니다) */
+.cal-ev .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-more{font-size:13.8px;color:var(--muted);padding:8px 0 0}
+/* 크게 보기 — 칸을 키우고 일정 이름을 칸 안에 직접 적습니다 */
+.cal-card.big .cal-d{min-height:calc(82px + var(--runrows,0) * 7px);text-align:left;padding:7px 9px calc(12px + var(--runrows,0) * 7px);overflow:visible}
+.cal-card.big .cal-dots{justify-content:flex-start}
+.cal-card.big .cal-lbl{display:block;font-size:12.6px;line-height:1.35;color:var(--ink-2);
+  margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-card.big .cal-ev .nm{white-space:normal}
+.cal-lbl{display:none}
+
+/* 사업이 진행 중인 기간은 형광펜을 그은 것처럼 띠로 표시합니다.
+   칸 배경을 통째로 칠하면 달력 전체가 한 덩어리로 보이고, 칸마다 띠를 그리면
+   칸 사이 여백에서 끊겨 이음매가 지저분합니다. 그래서 한 주에 막대 하나로 이어 긋고,
+   시작한 날과 끝나는 날에만 끝을 둥글게 마감합니다. */
+.cal-d{position:relative}
+.week-runs{position:absolute;left:0;right:0;bottom:5px;display:flex;flex-direction:column;gap:2px;
+  pointer-events:none}
+.week-runs .rr{position:relative;display:block;height:5px}
+.week-runs .rr i{position:absolute;top:0;height:5px;display:block;opacity:.9}
+.week-runs .rr i.s{border-radius:3px 0 0 3px}
+.week-runs .rr i.e{border-radius:0 3px 3px 0}
+/* 이전달·다음달 구간을 덮어 띠를 흐리게 보이게 하는 층 */
+.week-dim{position:absolute;top:0;bottom:0;background:var(--surface);opacity:.62;pointer-events:none}
+.run-key{display:inline-flex;align-items:center;gap:6px}
+.run-key i{width:14px;height:5px;border-radius:3px;display:block}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px 18px;position:relative}
+.tile .ic{position:absolute;top:15px;right:16px;color:var(--accent);opacity:.45}
+.tile .k{font-size:14.4px;color:var(--muted)}
+.tile .v{font-size:27.3px;font-weight:700;letter-spacing:-.5px;margin-top:3px;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.tile .v .unit{font-size:15px;font-weight:500;color:var(--muted);letter-spacing:0}
+.tile-meter{height:5px;border-radius:3px;background:var(--track);margin-top:10px;position:relative;overflow:hidden}
+.tile-meter i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--accent)}
+.tile.alert .v{color:var(--crit-ink)}
+.tile.alert .ic{color:var(--crit-ink);opacity:.55}
+.home-name{font-weight:600;color:var(--ink);display:block;text-align:left;line-height:1.4}
+.home-name:hover{color:var(--accent-ink);text-decoration:underline}
+.home-sub{font-size:13.8px;color:var(--muted);margin-top:2px}
+.minibar{height:8px;border-radius:4px;background:var(--track);position:relative;overflow:hidden;margin-top:5px}
+.minibar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:4px}
+.minibar .pin{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);border-radius:1px}
+.cellnum{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+.cellsub{font-size:13.8px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.page-title{font-size:22.4px;font-weight:700;letter-spacing:-.3px;margin-bottom:18px}
+.reg-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.reg-actions .btn-primary{width:auto;min-width:160px}
+.reg-actions .btn-ghost{width:auto;min-width:90px;padding:11px 16px}
+.btn-danger{border:1px solid var(--crit-ink);color:var(--crit-ink);border-radius:9px;padding:11px 16px;font-weight:600;background:transparent}
+.btn-danger:hover{background:var(--crit-bg)}
+#regDelete,#regCancel{display:none}
+#regDelete.on,#regCancel.on{display:inline-block}
+@media(max-width:760px){.app{grid-template-columns:1fr}.sidebar{position:static;height:auto}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
