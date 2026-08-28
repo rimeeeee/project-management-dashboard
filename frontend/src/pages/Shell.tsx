@@ -122,7 +122,17 @@ export default function Shell() {
         )}
 
         {view === "dash" && (detail ? (
+          /* key 에 사업 id 를 주어, 사업을 바꾸면 화면이 새로 그려지게 합니다.
+
+             이게 없으면 다른 사업으로 옮겨도 열어 둔 입력창과 '수정 중인 회차'가
+             그대로 남습니다. 실제로 주간 사업의 회차 키(W2026-08-17)가 월간 사업
+             화면에 남아 있었습니다.
+
+             프로토타입도 go() 에서 화면을 옮길 때마다 입력창을 닫고 수정 상태를
+             지웁니다(저장하지 않은 입력은 남기지 않습니다). 달력이 이번 달로
+             돌아가는 것도 같은 이유입니다. */
           <Dashboard
+            key={detail.id}
             p={detail}
             allProjects={projects}
             onGo={(id) => go("dash", id)}
