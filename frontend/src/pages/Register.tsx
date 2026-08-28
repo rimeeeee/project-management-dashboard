@@ -36,7 +36,7 @@ interface Props {
   onSaved: (p: ProjectDetail, msg: string, sub: string) => void;
   onDeleted: (name: string) => void;
   onCancel: () => void;
-  onModal: (msg: string, sub?: string, onOk?: () => void) => void;
+  onModal: (msg: string, sub?: string, onOk?: () => void, danger?: boolean) => void;
 }
 
 const onlyDigits = (s: string) => s.replace(/[^\d]/g, "");
@@ -131,7 +131,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
         } catch (ex) {
           setErr(ex instanceof Error ? ex.message : "삭제하지 못했습니다.");
         }
-      });
+      }, true);
   }
 
   return (

@@ -34,3 +34,10 @@
    .card.span2 로 되어 있어(.card 가 함께 있어야 함) 이 요소에는 걸리지
    않았습니다. 그래서 2열 중 왼쪽 칸 안에서만 가운데였습니다. */
 .dash-grid .dash-foot{grid-column:1/-1}
+
+/* 삭제 확인 팝업 — 위험한 동작인데 초록 체크(✓)와 청록 [확인] 버튼이 떠서
+   시각 신호가 '좋은 일'처럼 보였습니다. 글보다 색·아이콘을 먼저 읽는 사용자가
+   그대로 누르기 쉽습니다. 삭제 계열 확인창만 경고색으로 바꿉니다. */
+.modal .ic.danger{background:var(--crit-bg);color:var(--crit-ink)}
+.modal .acts .ok.danger{background:var(--crit-ink);color:#fff}
+.modal .acts .ok.danger:hover{filter:brightness(1.1)}

@@ -29,7 +29,7 @@ const dots = (iso: string) => iso.replaceAll("-", ".");
 interface Props {
   settings: AppSettings;
   onSettings: (s: AppSettings) => void;
-  onModal: (msg: string, sub?: string, onOk?: () => void) => void;
+  onModal: (msg: string, sub?: string, onOk?: () => void, danger?: boolean) => void;
   onEditAnn: (a: Ann | null) => void;
   // 공고를 '내 사업'으로 옮겨 등록 화면을 채웁니다
   onToProject: (a: Ann) => void;
@@ -139,7 +139,7 @@ export default function Announcements({
     onModal("이 공고를 삭제할까요?", a.title, async () => {
       await annApi.remove(a.id);
       await load();
-    });
+    }, true);
   }
 
   const last = collector?.last;
@@ -293,7 +293,12 @@ export default function Announcements({
                         onClick={() => toggleFav(a)}>{a.fav ? "★ 관심" : "☆ 관심"}</button>
                 <button type="button" className="mini-btn" onClick={() => onToProject(a)}>사업 등록</button>
                 <button type="button" className="mini-btn" onClick={() => onEditAnn(a)}>수정</button>
-                <button type="button" className="mini-btn danger" onClick={() => removeAnn(a)}>삭제</button>
+                {/* 수집된 공고는 지워도 다음 수집 때 되살아나므로 삭제 버튼을 두지
+                    않습니다 (기관 목록에 있는 한 다시 들어옵니다). 삭제는 직접
+                    등록·수정해서 '직접 등록' 표가 붙은 공고에만 보입니다. */}
+                {a.source === "manual" && (
+                  <button type="button" className="mini-btn danger" onClick={() => removeAnn(a)}>삭제</button>
+                )}
               </div>
             </div>
           </article>

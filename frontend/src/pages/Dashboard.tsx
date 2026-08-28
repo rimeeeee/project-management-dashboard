@@ -13,7 +13,7 @@ interface Props {
   onGo: (projId: string) => void;
   onZoom: (scope: "dash", ym: Date, picked: string) => void;
   onProjectChange: (p: ProjectDetail) => void;
-  onModal: (msg: string, sub?: string, onOk?: () => void) => void;
+  onModal: (msg: string, sub?: string, onOk?: () => void, danger?: boolean) => void;
   onEdit: () => void;
 }
 
@@ -59,7 +59,7 @@ export default function Dashboard({
         const r = await api.deleteEntry(p.id, pkey);
         if (editingKey === pkey) setEditingKey(null);
         return r.project;
-      }, "삭제되었습니다"));
+      }, "삭제되었습니다"), true);
   }
 
   function addTodo(ev: FormEvent) {

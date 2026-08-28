@@ -80,8 +80,8 @@ export default function Shell() {
       : [...list, next]);
   }, []);
 
-  const openModal = useCallback((msg: string, sub?: string, onOk?: () => void) => {
-    setModal({ msg, sub, onOk });
+  const openModal = useCallback((msg: string, sub?: string, onOk?: () => void, danger?: boolean) => {
+    setModal({ msg, sub, onOk, danger });
   }, []);
 
   const detail = currentId ? details[currentId] : undefined;
