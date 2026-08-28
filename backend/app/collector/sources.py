@@ -23,12 +23,14 @@ from app.core.calc import today
 
 log = logging.getLogger("bizdash.collector")
 
-# 며칠 전 게시물까지 가져올지
-COLLECT_DAYS = 90
-# 게시판을 몇 쪽까지 읽을지.
-# 인재원처럼 응답이 중간에 끊기는 곳이 있어, 여러 쪽을 겹쳐 읽습니다.
-# 새 공고가 더 나오지 않으면 알아서 멈춥니다.
-BOARD_PAGES = 8
+from app.core.config import get_settings
+
+# .env 로 바꿀 수 있습니다 (서버를 다시 시작해야 반영됩니다).
+# 실측: 의료정보원 RSS 는 2020년치까지 전부(271건) 한 번에 주고,
+#       인재원은 쪽당 50건이라 1쪽이 1년치, 진흥원만 쪽당 10건이라 1년 ≈ 30쪽입니다.
+COLLECT_DAYS = get_settings().collect_days     # 기관 게시판 수집기간(일)
+BOARD_PAGES = get_settings().board_pages       # 게시판 최대 쪽수
+NTIS_DAYS = get_settings().ntis_days           # NTIS 정기 수집 기간(일)
 
 
 @dataclass
@@ -294,7 +296,9 @@ def ntis() -> SourceResult:
     90일을 통째로 도는 것보다 훨씬 빠릅니다.
     """
     r = SourceResult(key="ntis-rss", name="NTIS 통합공고")
-    oldest_wanted = today() - datetime.timedelta(days=COLLECT_DAYS)
+    # 기관 게시판(COLLECT_DAYS)과 달리 짧게 둡니다 — 날짜별(dt=) 요청이
+    # 기간만큼 늘어나기 때문입니다. 과거는 scripts/ntis_backfill.py 로 채웁니다.
+    oldest_wanted = today() - datetime.timedelta(days=NTIS_DAYS)
 
     latest = _ntis_items(f"{NTIS_URL}?prt={NTIS_MAX}")
     items = list(latest)

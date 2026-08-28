@@ -43,6 +43,25 @@ class Settings(BaseSettings):
     collector_enabled: bool = False
     collector_cron: str = "0 6 * * 1,4"
 
+    # 기관 게시판(인재원·진흥원·의료정보원)을 며칠 전 게시물까지 가져올지.
+    # 공고는 연 단위 사업 주기라 '작년 이맘때 공고'를 찾는 일이 있어 1년으로 둡니다.
+    collect_days: int = 365
+    # 게시판을 최대 몇 쪽까지 읽을지.
+    #
+    # 실측(2026-08): 진흥원 게시판은 pageNum 이 10 에서 순환합니다.
+    # 11쪽은 1쪽, 16쪽은 6쪽과 같은 내용을 돌려줍니다. rowCnt(쪽당 건수),
+    # schStartDate/schEndDate(기간 검색), minIndex/maxIndex 모두 GET·POST 어느
+    # 쪽으로도 먹지 않았습니다. 즉 그 게시판이 밖으로 내주는 것은 약 102건
+    # (2026-08 기준 약 6.5개월)이 전부입니다.
+    #
+    # 인재원은 쪽당 50건이라 1년이 2쪽이면 끝나고, 수집기간을 벗어난 글만 나오는
+    # 쪽에 닿으면 알아서 멈춥니다. 그래서 12로 두어도 세 기관 모두 한계까지 받습니다.
+    board_pages: int = 12
+    # NTIS 는 최신 100건 너머를 날짜별(dt=)로 받아야 해서, 기간을 길게 잡으면
+    # 정기 수집마다 수백 번 요청하게 됩니다. 정기 수집은 90일로 두고,
+    # 더 과거는 scripts/ntis_backfill.py 로 한 번만 채웁니다.
+    ntis_days: int = 90
+
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

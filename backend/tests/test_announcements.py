@@ -209,3 +209,20 @@ def test_부처_칩은_가나다순이고_기타가_맨_뒤다(client, db):
 
     names = [m["name"] for m in client.get(f"{A}?size=1").json()["facets"]["ministries"]]
     assert names == ["경찰청", "과학기술정보통신부", "산업통상부", "해양수산부", "기타"]
+
+
+def test_수집기간_설정이_실제로_반영된다(monkeypatch):
+    """
+    COLLECT_DAYS 를 .env 로 바꿀 수 있게 했습니다.
+    기간 안의 글만 담기는지 확인합니다.
+    """
+    from app.collector import sources
+
+    monkeypatch.setattr(sources, "COLLECT_DAYS", 365)
+    assert sources.in_period((datetime.date.today() - datetime.timedelta(days=300)).isoformat())
+    assert not sources.in_period((datetime.date.today() - datetime.timedelta(days=400)).isoformat())
+
+    monkeypatch.setattr(sources, "COLLECT_DAYS", 90)
+    assert not sources.in_period((datetime.date.today() - datetime.timedelta(days=300)).isoformat())
+    # 게시일을 못 읽은 글은 버리지 않습니다 (놓치는 편보다 낫습니다)
+    assert sources.in_period("")
