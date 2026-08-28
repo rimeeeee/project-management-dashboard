@@ -212,9 +212,101 @@ def khidi() -> SourceResult:
     )
 
 
+# ======================================================================
+# NTIS 국가R&D 통합공고
+# ======================================================================
+NTIS_URL = "http://www.ntis.go.kr/rndgate/unRndRss.xml"
+
+# prt 는 최대 100 입니다 (200·500 을 넣어도 100건만 옵니다).
+# Fi 는 '전체에서 몇 번째부터'가 아니라 'prt 로 가져온 묶음 안의 시작 행'이라
+# 100건 너머로는 넘어갈 수 없습니다. 더 과거를 가져오려면 dt=YYYYMMDD 로
+# 날짜별로 받아야 합니다 (scripts/ntis_backfill.py).
+NTIS_MAX = 100
+
+
+def _ntis_items(url: str) -> list[dict]:
+    """
+    NTIS 는 마감일(appdue)과 공고금액(budget)을 직접 줍니다.
+    기관 게시판처럼 제목에서 뽑아낼 필요가 없어 훨씬 정확합니다.
+    (XSL 샘플에는 이 태그들이 없어서 없을 줄 알았는데, 실제로는 있었습니다.
+     docs/ntis/unRndRss-원문.xml 참고)
+    """
+    body = get(url, timeout=60)
+    root = ET.fromstring(body.encode("utf-8"))
+    out = []
+    for node in root.iter():
+        if not node.tag.lower().endswith("item"):
+            continue
+        g = {c.tag: (c.text or "").strip() for c in node}
+        title = re.sub(r"<[^>]+>", "", g.get("title", "")).strip()
+        if not title:
+            continue
+
+        posted = parse.first_date(g.get("pubDate", ""))      # 2026.08.21 형태
+        open_from = parse.first_date(g.get("appbegin", "")) or posted
+        due = parse.first_date(g.get("appdue", ""))
+        # 마감일이 비어 있는 공고만 제목에서 뽑아 봅니다
+        due_time = ""
+        if not due:
+            due, due_time = parse.find_due(title, posted)
+
+        try:
+            amount = max(0, int(float(g.get("budget") or 0)))
+        except ValueError:
+            amount = 0
+
+        link = g.get("link", "")
+        out.append({
+            "id": parse.uid("ntis-rss", link or title),
+            "ministry": g.get("author", "") or "NTIS 통합공고",   # 공고기관(부처)
+            "agency": g.get("category", ""),                      # 전문기관
+            "no": "",
+            "title": title,
+            "program": "",
+            "posted": posted,
+            "openFrom": open_from,
+            "due": due,
+            "dueTime": due_time,
+            "amount": amount,
+            "contact": "",
+            "url": link,
+            "source": "ntis-rss",
+            "_key": link or title,
+        })
+    return out
+
+
+def ntis() -> SourceResult:
+    """
+    NTIS 통합공고 — 최신 100건.
+
+    전 부처라 건수가 많지만(전체 1만 건이 넘습니다) 하루에 새로 올라오는 것은
+    두어 건 수준입니다. 주 2회 수집이면 최신 100건으로 충분히 덮습니다.
+
+    수집 단계에서 키워드로 버리지 않고 전량 저장합니다. 걸러내기는 화면에서만 합니다.
+    """
+    r = SourceResult(key="ntis-rss", name="NTIS 통합공고")
+    items = _ntis_items(f"{NTIS_URL}?prt={NTIS_MAX}")
+    kept = [a for a in items if in_period(a["posted"])]
+    if len(kept) < len(items):
+        r.notes.append(f"{len(items)}건 중 수집기간({COLLECT_DAYS}일) 안의 {len(kept)}건만 담았습니다.")
+    # 최신 100건을 꽉 채워 받았다면 그 너머에 더 있을 수 있다는 뜻입니다
+    if len(items) >= NTIS_MAX and all(in_period(a["posted"]) for a in items):
+        r.notes.append("최신 100건이 모두 수집기간 안입니다 — 그 이전 공고는 "
+                       "scripts/ntis_backfill.py 로 채워 주세요.")
+    r.items = kept
+    return r
+
+
+def ntis_by_date(day: datetime.date) -> list[dict]:
+    """특정 공고일의 NTIS 공고 (과거를 채울 때 씁니다)"""
+    return _ntis_items(f"{NTIS_URL}?prt={NTIS_MAX}&dt={day.strftime('%Y%m%d')}")
+
+
 # 순서대로 돌립니다. 하나가 실패해도 나머지는 계속 수집됩니다.
 SOURCES: list[tuple[str, str, Callable[[], SourceResult]]] = [
     ("khis", "한국보건의료정보원", khis),
     ("kohi", "한국보건복지인재원", kohi),
     ("khidi", "한국보건산업진흥원", khidi),
+    ("ntis", "NTIS 통합공고", ntis),
 ]
