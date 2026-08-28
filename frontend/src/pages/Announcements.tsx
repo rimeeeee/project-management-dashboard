@@ -182,7 +182,6 @@ export default function Announcements({
                      include: includeText.split(",").map((x) => x.trim()).filter(Boolean),
                    })}
                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
-            <span className="help">공고명·사업명에만 맞춰 봅니다. 비워 두면 전부 보입니다.</span>
           </div>
           <div className="f">
             <label htmlFor="fAmt">공고금액</label>
