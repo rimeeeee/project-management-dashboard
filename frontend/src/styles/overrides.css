@@ -26,3 +26,11 @@
 }
 .reg-actions .btn-danger{border-color:var(--crit-ink)}
 .reg-actions .btn-ghost{border-color:var(--line-strong)}
+
+/* 대시보드 맨 아래 '공유폴더' 줄을 화면 가운데로 옮겼습니다.
+
+   프로토타입에서는 왼쪽으로 치우쳐 보였습니다. .dash-foot 에 이미
+   justify-content:center 가 걸려 있지만, 전체 폭을 넓히는 규칙이
+   .card.span2 로 되어 있어(.card 가 함께 있어야 함) 이 요소에는 걸리지
+   않았습니다. 그래서 2열 중 왼쪽 칸 안에서만 가운데였습니다. */
+.dash-grid .dash-foot{grid-column:1/-1}
