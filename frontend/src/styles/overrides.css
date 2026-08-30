@@ -46,8 +46,8 @@
    사업관리 대시보드 글자와 나란히 두지 않고 위에 얹습니다.
    사이드바가 좁아(사업명이 두 줄로 접히지 않게 넓혀 둔 폭) 나란히 두면
    글자가 눌립니다. */
-.brand{display:flex; flex-direction:column; align-items:flex-start; gap:8px}
-.brand-logo{display:block; width:104px; height:auto}
+.brand{display:flex; flex-direction:column; align-items:flex-start; gap:6px}
+.brand-logo{display:block; width:72px; height:auto}
 
 /* 어두운 화면에서는 로고의 진한 남색(#006cb7)이 배경에 묻힙니다.
    색을 바꾸지 않고 아주 옅게 밝히기만 합니다. */
