@@ -24,6 +24,7 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <div className="brand">
+        <img className="brand-logo" src="/brand/logo.svg" alt="" />
         <div className="t">사업관리 대시보드</div>
       </div>
 

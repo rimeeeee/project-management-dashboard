@@ -46,6 +46,8 @@ export default function Login({ onSuccess }: Props) {
   return (
     <div className="login-wrap">
       <div className="login-box">
+        {/* 로고는 그림이라 화면 낭독기에는 아래 제목만 읽히면 됩니다 */}
+        <img className="login-logo" src="/brand/logo.svg" alt="" />
         <div className="login-title">사업관리 대시보드</div>
         <div className="login-sub">디지털전략팀</div>
 

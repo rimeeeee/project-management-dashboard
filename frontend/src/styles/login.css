@@ -11,6 +11,8 @@
 .login-box{width:100%; max-width:420px}
 
 /* 제목 — .page-title(22.4px)보다 한 단계 크게. 이 화면에는 이것 하나뿐입니다. */
+/* 로고 — 원본 비율 348:225 (약 1.54:1) 를 유지합니다 */
+.login-logo{display:block; width:150px; height:auto; margin:0 auto 14px}
 .login-title{font-size:26px; font-weight:700; letter-spacing:-.3px; text-align:center}
 .login-sub{
   font-size:15px; color:var(--muted); text-align:center;
