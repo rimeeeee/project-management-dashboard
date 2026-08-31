@@ -97,7 +97,6 @@
 │   └── set_password.py               비밀번호 변경 ★배포 시 사용
 ├── .env                              
 ├── .env.example                      설정 항목 견본 ★배포 시 복사해서 사용
-├── bizdash-배포.tar.gz                 
 ├── docker-compose.yml                (Docker 로 올릴 경우에만 씀)
 ├── Dockerfile                        (Docker 로 올릴 경우에만 씀)
 └── README.md                         개발자용 안내
