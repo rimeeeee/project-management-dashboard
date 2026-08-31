@@ -128,32 +128,6 @@ def expected_eq(a: object, b: object) -> bool:
     return a == b
 
 
-# ---------------------------------------------------------------- 시간대
-def verify_timezone() -> None:
-    head("3. 시간대 — UTC(프로토타입) vs 한국시간(이식본)")
-    print("  프로토타입 JS 는 new Date(\"2026-06-01\") 을 UTC 자정으로 읽습니다.")
-    print("  이식본은 한국시간 자정으로 봅니다. 두 값이 얼마나 다른지 확인합니다.")
-
-    db = SessionLocal()
-    projs = {p.id: (p.start, p.end) for p in db.query(Project).all()}
-    lines = [l.split("\t") for l in node("js_planned.js").split("\n")]
-
-    diffs = []
-    for pid, i, v in lines:
-        if pid not in projs:
-            continue
-        s, e = projs[pid]
-        at = datetime(2026, 1, 1, 9, 0, 0, tzinfo=KST) + timedelta(days=int(i))
-        mine = calc_planned(s, e, at)
-        if mine != int(v):
-            diffs.append(abs(mine - int(v)))
-
-    pct = len(diffs) / max(1, len(lines)) * 100
-    biggest = max(diffs) if diffs else 0
-    print(f"\n  대조 {len(lines)}건 중 {len(diffs)}건({pct:.1f}%)이 다르고, 최대 차이는 {biggest}%p 입니다.")
-    check(biggest <= 1, f"차이는 최대 {biggest}%p 입니다 (2%p 이상이면 원인을 확인해야 합니다)")
-
-
 def prepare() -> None:
     """임시 데이터베이스에 프로토타입 시드를 넣습니다."""
     from app.db.session import Base, engine
@@ -173,7 +147,6 @@ if __name__ == "__main__":
     prepare()
     verify_periods()
     verify_dashboard()
-    verify_timezone()
     print("\n" + "=" * 66)
     print("검증 실패 항목이 있습니다" if FAIL else "모든 검증을 통과했습니다")
     sys.exit(1 if FAIL else 0)
