@@ -13,7 +13,7 @@ for _s in (sys.stdout, sys.stderr):        # Windows 콘솔(cp949)에서 한글�
     _s.reconfigure(encoding="utf-8")
 
 ROOT = Path(__file__).resolve().parents[2]
-SKIP = {"node_modules", ".git", ".venv", "__pycache__", "dist", ".pytest_cache", "fonts"}
+SKIP = {"node_modules", ".git", ".venv", "__pycache__", ".pytest_cache", "fonts"}
 SKIP_FILE = {"package-lock.json", ".DS_Store", "tsconfig.tsbuildinfo",
              "Dockerfile", "docker-compose.yml", ".env"}
 
@@ -22,6 +22,7 @@ FOLD = {"backend/tests", "backend/alembic", "backend/app/api", "backend/app/db",
         "backend/app/models", "backend/app/services", "backend/app/core",
         "backend/app/collector", "frontend/src/pages", "frontend/src/components",
         "frontend/src/lib", "frontend/src/styles", "frontend/public",
+        "frontend/dist",
         "scripts/seed", "scripts/verify", "scripts/probe", "scripts/docs",
         "docs/prototype", "docs/ntis", "data"}
 
@@ -42,6 +43,7 @@ NOTE = {
  "frontend/src/lib": "서버 통신·표시 변환",
  "frontend/src/styles": "디자인 ★",
  "frontend/public": "로고·글꼴",
+ "frontend/dist": "만들어진 화면 — 서버가 이것을 내보냅니다",
  "frontend/package.json": "설치할 프론트엔드 라이브러리",
  "scripts": "도구",
  "scripts/set_password.py": "비밀번호 변경",
@@ -50,6 +52,7 @@ NOTE = {
  "scripts/fetch_fonts.py": "글꼴 내려받기",
  "scripts/dev.sh": "개발 서버 실행 (macOS·Linux)",
  "scripts/dev.ps1": "개발 서버 실행 (Windows)",
+ "scripts/release.ps1": "서버에 올릴 준비",
  "scripts/seed": "개발용 예시 자료",
  "scripts/verify": "디자인 시안 대조 검증 ★",
  "scripts/probe": "NTIS 응답 형식 조사",

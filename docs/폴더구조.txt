@@ -25,6 +25,7 @@
 │   ├── 설치방법.txt
 │   └── 폴더구조.txt
 ├── frontend/                       화면 (React)
+│   ├── dist/                       만들어진 화면 — 서버가 이것을 내보냅니다
 │   ├── public/                     로고·글꼴
 │   ├── src/
 │   │   ├── components/             화면 구성 요소
@@ -47,6 +48,7 @@
 │   ├── fetch_fonts.py              글꼴 내려받기
 │   ├── make_package.sh             서버에 올릴 파일만 모아 압축
 │   ├── ntis_backfill.py            NTIS 지난 공고 채우기
+│   ├── release.ps1                 서버에 올릴 준비
 │   └── set_password.py             비밀번호 변경
 ├── .env.example                    설정 견본 — .env 로 복사해서 씁니다
 ├── README.md                       개발자용 안내
