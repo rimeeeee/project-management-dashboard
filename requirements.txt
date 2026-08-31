@@ -7,5 +7,8 @@ pydantic-settings
 argon2-cffi
 itsdangerous
 apscheduler
-python-multipart
 certifi
+
+# 테스트용 — 서버 운영에는 쓰이지 않지만 파일을 하나로 두려고 여기 넣습니다.
+pytest
+httpx
