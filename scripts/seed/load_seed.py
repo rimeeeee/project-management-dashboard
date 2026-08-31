@@ -1,5 +1,8 @@
 """
-프로토타입 시드 데이터를 데이터베이스로 옮깁니다.
+프로토타입 시드 데이터를 데이터베이스로 옮깁니다.  ※ 개발용입니다.
+
+실제 서비스에는 돌리지 마세요. 예시 사업 2건이 들어갑니다.
+(실수로 돌렸다면 scripts/seed/clear_examples.py 로 지울 수 있습니다.)
 
     .venv/bin/python scripts/seed/load_seed.py           # 비어 있을 때만
     .venv/bin/python scripts/seed/load_seed.py --reset   # 지우고 다시 넣기

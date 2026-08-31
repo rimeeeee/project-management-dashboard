@@ -68,6 +68,37 @@ cd backend && ../.venv/bin/python -m pytest      # 저장·충돌·이력
 .venv/bin/python scripts/verify/run.py           # 프로토타입 대조
 ```
 
+## 실제 서버에 올릴 때
+
+새 서버에서는 데이터베이스가 비어 있는 상태로 시작합니다.
+**`scripts/seed/load_seed.py` 는 돌리지 마세요.** 프로토타입 예시 사업이 들어갑니다.
+
+```bash
+# 1) 설정값 준비
+cp .env.example .env
+.venv/bin/python scripts/set_password.py     # 비밀번호 정하기
+# .env 에서 SECRET_KEY 를 바꾸고, https 라면 COOKIE_SECURE=true
+
+# 2) 띄우기
+docker compose up -d --build                 # 표는 자동으로 만들어집니다
+
+# 3) 화면에서
+#    로그인 → [사업 현황 (공고)] → [지금 수집]  (공고 300건 이상 들어옵니다)
+#    → [신규 사업 등록] 으로 실제 사업 등록
+```
+
+지난 공고까지 채우려면 (선택):
+
+```bash
+.venv/bin/python scripts/ntis_backfill.py --days 180
+```
+
+예시 사업이 실수로 들어갔다면:
+
+```bash
+.venv/bin/python scripts/seed/clear_examples.py
+```
+
 ## 문서
 
 | | |
