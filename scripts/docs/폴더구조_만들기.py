@@ -6,7 +6,11 @@ docs/폴더구조.txt 를 실제 폴더를 읽어 만듭니다.
 파일을 추가하거나 옮긴 뒤에 돌려 주세요.
 폴더 설명을 붙이려면 아래 NOTE 에 한 줄 추가하면 됩니다.
 """
+import sys
 from pathlib import Path
+
+for _s in (sys.stdout, sys.stderr):        # Windows 콘솔(cp949)에서 한글이 깨지지 않게
+    _s.reconfigure(encoding="utf-8")
 
 ROOT = Path(__file__).resolve().parents[2]
 SKIP = {"node_modules", ".git", ".venv", "__pycache__", "dist", ".pytest_cache", "fonts"}
@@ -32,7 +36,6 @@ NOTE = {
  "backend/app/db": "데이터베이스 연결",
  "backend/alembic": "표 구조 변경 이력",
  "backend/tests": "자동 테스트",
- "backend/requirements.txt": "설치할 파이썬 라이브러리",
  "frontend": "화면 (React)",
  "frontend/src/pages": "화면 단위",
  "frontend/src/components": "화면 구성 요소",
@@ -45,7 +48,8 @@ NOTE = {
  "scripts/ntis_backfill.py": "NTIS 지난 공고 채우기",
  "scripts/make_package.sh": "서버에 올릴 파일만 모아 압축",
  "scripts/fetch_fonts.py": "글꼴 내려받기",
- "scripts/dev.sh": "개발 서버 실행",
+ "scripts/dev.sh": "개발 서버 실행 (macOS·Linux)",
+ "scripts/dev.ps1": "개발 서버 실행 (Windows)",
  "scripts/seed": "개발용 예시 자료",
  "scripts/verify": "디자인 시안 대조 검증 ★",
  "scripts/probe": "NTIS 응답 형식 조사",
@@ -56,6 +60,7 @@ NOTE = {
  "data": "자료 저장 (bizdash.db)",
  ".env.example": "설정 견본 — .env 로 복사해서 씁니다",
  "README.md": "개발자용 안내",
+ "requirements.txt": "설치할 파이썬 라이브러리",
 }
 
 lines = []
@@ -69,7 +74,7 @@ def walk(d: Path, prefix: str = "") -> None:
     )
     for i, p in enumerate(items):
         last = i == len(items) - 1
-        rel = str(p.relative_to(ROOT))
+        rel = p.relative_to(ROOT).as_posix()  # Windows 에서도 "/" 로 맞춥니다 (FOLD·NOTE 조회 키)
         name = p.name + ("/" if p.is_dir() else "")
         row = f"{prefix}{'└── ' if last else '├── '}{name}"
         note = NOTE.get(rel, "")
@@ -81,69 +86,13 @@ def walk(d: Path, prefix: str = "") -> None:
 walk(ROOT)
 
 
-def loc(pattern: str, path: str, exclude: set[str] = frozenset()) -> int:
-    fs = [f for f in (ROOT / path).rglob(pattern)
-          if not any(s in f.parts for s in SKIP) and f.name not in exclude]
-    return sum(len(f.read_text(encoding="utf-8", errors="ignore").splitlines()) for f in fs)
-
-
-def tests() -> int:
-    """테스트 개수 — 파일에서 직접 셉니다."""
-    n = 0
-    for f in (ROOT / "backend" / "tests").rglob("test_*.py"):
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.startswith("def test_"):
-                n += 1
-            if line.startswith("@pytest.mark.parametrize"):
-                n += 6   # 대략치
-    return n
-
-
-doc = f"""================================================================
+HEADER = """================================================================
  사업관리 대시보드 — 폴더 구조
 ================================================================
 
-""" + "\n".join(lines) + f"""
-
-
-  ※ 아래는 프로그램이 만드는 것이라 목록에서 뺐습니다.
-     node_modules/  .venv/  frontend/dist/  __pycache__/  글꼴 376개
-
-
-────────────────────────────────────────────────────────────────
- 규모
-────────────────────────────────────────────────────────────────
-
-  서버 (Python)        {loc('*.py','backend/app'):>6,} 줄
-  화면 (TypeScript)    {loc('*.tsx','frontend/src')+loc('*.ts','frontend/src'):>6,} 줄
-  디자인 (CSS)         {loc('*.css','frontend/src/styles', {'fonts.css'}):>6,} 줄
-  자동 테스트          {loc('*.py','backend/tests'):>6,} 줄
-
-
-────────────────────────────────────────────────────────────────
- 고칠 일이 있을 때 (★ 표시한 곳)
-────────────────────────────────────────────────────────────────
-
- backend/app/core/
-   진행률·상태 판정·보고 회차 계산이 모두 여기 있습니다.
-   화면은 계산하지 않고 서버가 준 값을 보여주기만 합니다.
-
- backend/app/collector/
-   공고 수집입니다. fetch.py 의 '응답 잘림 대응' 은 한국보건복지인재원
-   서버가 응답을 중간에 끊는 문제에 대한 것입니다.
-   지우면 수집 건수가 실행할 때마다 달라집니다.
-
- frontend/src/styles/
-   prototype.css 는 확정된 디자인 시안에서 그대로 가져온 파일입니다.
-   수정하지 마세요. 바꿀 일이 있으면 overrides.css 에 적습니다.
-
- scripts/verify/run.py
-   지금 코드가 디자인 시안과 같은 값을 내는지 대조합니다.
-   계산 규칙을 고쳤다면 돌려 보세요.
-
-       .venv/bin/python scripts/verify/run.py
 """
 
 out = ROOT / "docs" / "폴더구조.txt"
+doc = HEADER + "\n".join(lines) + "\n"
 out.write_text(doc, encoding="utf-8")
 print(f"만들었습니다 ({len(doc.splitlines())}줄)")
