@@ -12,9 +12,10 @@
 
   Python      3.12 이상       필수
   Node.js     20 이상         필수 (화면을 만들 때 한 번만 씁니다)
-  PostgreSQL  14 이상         운영용
-                              ※ 없어도 됩니다. 없으면 파일 하나로
-                                동작하는 SQLite 로 바로 쓸 수 있습니다.
+
+  데이터베이스는 따로 설치하지 않아도 됩니다.
+  기본은 SQLite 로, 파일 하나에 저장됩니다.
+  (PostgreSQL 을 쓰실 수도 있습니다 — 4단계 참고)
 
   설치되어 있는지 확인:
 
@@ -72,31 +73,43 @@
   나온 값을 .env 의 SECRET_KEY= 뒤에 붙여넣습니다.
 
 
-─── 4단계.  데이터베이스 정하기 ────────────────────────────────
+─── 4단계.  데이터베이스 (그냥 넘어가셔도 됩니다) ──────────────
 
-  ▷ 그냥 써보실 거면 (SQLite)
+  기본은 SQLite 입니다. 아무것도 안 하셔도 됩니다.
+  data 폴더에 파일 하나(bizdash.db)로 저장됩니다.
 
-    아무것도 안 하셔도 됩니다. .env 의 기본값이 SQLite 입니다.
-    data 폴더에 파일 하나로 저장됩니다.
+    · 따로 설치할 것이 없습니다
+    · 백업은 그 파일 하나를 복사하면 됩니다
+    · 이 서비스 규모(팀 단위 사용)에는 충분합니다
 
-  ▷ 운영으로 쓰실 거면 (PostgreSQL)
+  ▷ PostgreSQL 로 바꾸고 싶다면
 
-    PostgreSQL 에 접속해서 데이터베이스와 계정을 만듭니다.
+    전산실에 PostgreSQL 이 이미 있고 계정을 받을 수 있다면
+    그쪽으로 옮기는 것도 좋습니다. 기존 백업 체계에 함께 들어갑니다.
+
+    데이터베이스와 계정을 만들고
 
         CREATE DATABASE bizdash;
         CREATE USER bizdash WITH PASSWORD '정하실_비밀번호';
         GRANT ALL PRIVILEGES ON DATABASE bizdash TO bizdash;
 
-    PostgreSQL 15 이상이면 아래도 함께 실행해 주세요.
+    PostgreSQL 15 이상이면 아래도 함께 실행합니다.
 
         \c bizdash
         GRANT ALL ON SCHEMA public TO bizdash;
 
-    그리고 .env 의 DATABASE_URL 을 아래처럼 바꿉니다.
+    .env 의 DATABASE_URL 을 바꿉니다.
 
         DATABASE_URL=postgresql+psycopg://bizdash:정하신_비밀번호@localhost:5432/bizdash
 
+    ※ 이 방식은 아직 실제로 돌려본 적이 없습니다.
+      코드는 두 가지를 모두 지원하도록 만들었지만,
+      확인은 SQLite 로만 했습니다. 처음 쓰실 때 함께 봐 주세요.
+
   ※ 어느 쪽이든 표(테이블)는 처음 실행할 때 자동으로 만들어집니다.
+  ※ 나중에 바꿔도 됩니다. DATABASE_URL 한 줄만 고치면 되고
+    코드는 손대지 않습니다. (기존 자료는 옮겨지지 않으니
+    바꾸기 전에 상의해 주세요)
 
 
 ─── 5단계.  실행 ───────────────────────────────────────────────
