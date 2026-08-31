@@ -1,0 +1,179 @@
+사업관리 대시보드 — 폴더 구조
+================================================================
+만든 날짜: 2026-08-31
+이 파일은 scripts 로 실제 폴더를 읽어 만든 것입니다.
+
+아래는 제외했습니다 (프로그램이 자동으로 만드는 것들):
+  node_modules/   프론트엔드 라이브러리
+  .venv/          파이썬 라이브러리
+  dist/           빌드 결과물
+  __pycache__/    파이썬 임시 파일
+  frontend/public/fonts/   글꼴 파일 376개
+  package-lock.json
+
+★ 표시는 특히 중요한 곳입니다.
+================================================================
+
+├── backend/                                  FastAPI 서버
+│   ├── alembic/                              데이터베이스 변경 이력
+│   │   ├── versions/
+│   │   │   ├── 3d729a105775_표_만들기.py
+│   │   │   └── 7873989df1fe_성과지표_소수점_허용.py
+│   │   ├── env.py
+│   │   └── script.py.mako
+│   ├── app/
+│   │   ├── api/                              HTTP 창구
+│   │   │   ├── __init__.py
+│   │   │   ├── announcements.py
+│   │   │   ├── auth.py
+│   │   │   ├── entries.py
+│   │   │   ├── projects.py
+│   │   │   ├── register.py
+│   │   │   └── settings.py
+│   │   ├── collector/                        ★ 공고 수집
+│   │   │   ├── __init__.py
+│   │   │   ├── fetch.py                      받아오기 (인재원 응답 잘림 대응 — 지우지 마세요)
+│   │   │   ├── parse.py                      제목·게시일·마감일 읽기 (원본 검증 로직)
+│   │   │   ├── runner.py                     수집 실행 · 데이터베이스 반영
+│   │   │   ├── scheduler.py                  자동 수집 (기본 꺼짐)
+│   │   │   └── sources.py                    기관 3곳 + NTIS
+│   │   ├── core/                             ★ 규칙이 사는 곳 (여기만 고치면 전체에 반영)
+│   │   │   ├── __init__.py
+│   │   │   ├── calc.py                       진행률 · 상태 판정 (−5%p / −15%p)
+│   │   │   ├── config.py                     설정값 읽기
+│   │   │   ├── http.py                       SSL 인증서 (수집이 실패하던 원인)
+│   │   │   ├── periods.py                    보고 회차 계산 (주간/격주/월간)
+│   │   │   ├── security.py                   비밀번호(Argon2) · 세션 쿠키
+│   │   │   └── timeutil.py                   한국시간 변환 (SQLite 시간대 대응)
+│   │   ├── db/                               데이터베이스 연결
+│   │   │   ├── __init__.py
+│   │   │   └── session.py
+│   │   ├── models/                           데이터베이스 표 14개
+│   │   │   └── __init__.py
+│   │   ├── services/                         조회 · 저장 로직
+│   │   │   ├── __init__.py
+│   │   │   ├── announcements.py
+│   │   │   ├── entries.py
+│   │   │   └── projects.py
+│   │   ├── __init__.py
+│   │   └── main.py                           앱 시작 · 라우터 등록 · 스케줄러
+│   ├── tests/                                자동 테스트 63건
+│   │   ├── fixtures/
+│   │   │   └── ntis_sample.xml
+│   │   ├── conftest.py
+│   │   ├── test_announcements.py
+│   │   ├── test_entries.py
+│   │   ├── test_ntis.py
+│   │   └── test_register.py
+│   ├── alembic.ini
+│   ├── pytest.ini
+│   └── requirements.txt
+├── data/                                     로컬 SQLite (git 에 올리지 않음)
+│   └── bizdash.db
+├── docs/                                     문서
+│   ├── ntis/                                 NTIS 응답 원문 (매핑 근거)
+│   │   └── unRndRss-원문.xml
+│   ├── prototype/                            ★ 원본 HTML + 수집 스크립트 = 요구사항 명세서
+│   │   ├── README.md
+│   │   ├── 공고수집_v9.py
+│   │   └── 사업관리_대시보드_4.html
+│   ├── 개발환경-메모.md
+│   ├── 공고수집.md
+│   ├── 기술스택.txt
+│   ├── 시간대-판단필요.md
+│   └── 폴더구조.txt
+├── frontend/                                 React + TypeScript 화면
+│   ├── public/
+│   │   ├── brand/                            로고
+│   │   │   └── logo.svg
+│   │   └── prototype.html                    프로토타입 (나란히 비교용)
+│   ├── src/
+│   │   ├── components/                       화면 조각
+│   │   │   ├── AnnForm.tsx
+│   │   │   ├── Calendar.tsx
+│   │   │   ├── InputPanel.tsx
+│   │   │   ├── Modal.tsx
+│   │   │   ├── Pager.tsx
+│   │   │   └── Sidebar.tsx
+│   │   ├── lib/                              서버 통신 · 표시 변환
+│   │   │   ├── annApi.ts
+│   │   │   ├── api.ts
+│   │   │   ├── cron.ts
+│   │   │   ├── format.ts
+│   │   │   ├── theme.ts
+│   │   │   └── types.ts
+│   │   ├── pages/                            화면
+│   │   │   ├── Announcements.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Home.tsx
+│   │   │   ├── Login.tsx
+│   │   │   ├── Register.tsx
+│   │   │   └── Shell.tsx
+│   │   ├── styles/                           스타일
+│   │   │   ├── fonts.css
+│   │   │   ├── login.css
+│   │   │   ├── overrides.css                 ★ 일부러 바꾼 것만 (무엇을 왜 바꿨는지 주석에)
+│   │   │   ├── pager.css
+│   │   │   └── prototype.css                 ★ 프로토타입에서 그대로 복사 — 손대지 마세요
+│   │   ├── App.tsx                           로그인 여부 판단 · ?logout
+│   │   └── main.tsx
+│   ├── index.html
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── tsconfig.tsbuildinfo
+│   └── vite.config.ts
+├── scripts/                                  운영 · 개발 도구
+│   ├── docs/
+│   │   ├── README.md
+│   │   ├── 기술스택_만들기.py
+│   │   └── 폴더구조_만들기.py
+│   ├── probe/                                NTIS 필드 조사용
+│   │   └── ntis.py
+│   ├── seed/                                 프로토타입 데이터 이관
+│   │   ├── extract.js
+│   │   ├── load_seed.py
+│   │   └── prototype-seed.json
+│   ├── verify/                               ★ 프로토타입 대조 검증 (회차 2,700건)
+│   │   ├── js_calc.js
+│   │   ├── js_periods.js
+│   │   ├── js_planned.js
+│   │   ├── README.md
+│   │   └── run.py
+│   ├── dev.sh                                개발 서버 실행
+│   ├── fetch_fonts.py                        글꼴 내려받기
+│   ├── ntis_backfill.py                      NTIS 지난 공고 채우기
+│   └── set_password.py                       비밀번호 변경
+├── .env                                      실제 설정값 (git 에 올리지 않음)
+├── .env.example                              설정 항목 見本 — 새 서버에서 복사해 채웁니다
+├── docker-compose.yml                        PostgreSQL + 백엔드 한 번에 띄우기
+├── Dockerfile                                백엔드 이미지
+└── README.md                                 전체 안내 · 실행 방법
+
+================================================================
+코드 규모
+================================================================
+  백엔드 (파이썬)       3,420 줄
+  자동 테스트             771 줄
+  프론트엔드 (TS/TSX)   3,028 줄
+  스타일 (CSS)          3,674 줄
+
+================================================================
+꼭 알아두실 것
+================================================================
+1. backend/app/core/ 가 규칙의 유일한 자리입니다.
+   진행률·상태 판정·회차 계산이 전부 여기 있습니다.
+   화면은 서버가 계산한 값을 받아 표시만 합니다.
+   규칙이 두 군데 있으면 한쪽만 고쳐져 숫자가 어긋나기 때문입니다.
+
+2. frontend/src/styles/prototype.css 는 손대지 마세요.
+   프로토타입에서 그대로 복사한 파일입니다.
+   바꿀 일이 있으면 overrides.css 에 적습니다.
+   그래야 "무엇을 왜 바꿨는지" 가 한 파일에 모입니다.
+
+3. docs/prototype/ 이 요구사항 명세서입니다.
+   scripts/verify/run.py 가 이 원본을 실행해 지금 코드와 대조합니다.
+   계산 규칙을 고쳤다면 반드시 다시 돌려 보세요.
+
+4. backend/app/collector/fetch.py 의 응답 잘림 대응은 지우지 마세요.
+   한국보건복지인재원 서버가 응답을 중간에 끊습니다.
+   이 대응이 없으면 수집 건수가 실행할 때마다 들쭉날쭉해집니다.
