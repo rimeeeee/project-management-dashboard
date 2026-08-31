@@ -6,14 +6,23 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
+
+# 검증은 임시 데이터베이스에서 돌립니다.
+# 예전에는 개발용 데이터베이스의 예시 사업(p1·p2)을 그대로 읽었는데,
+# 실제로 쓰기 시작하면 그 사업들이 없어져서 검증이 통째로 실패했습니다.
+# 여기서 시드를 새로 넣고 대조하므로 실제 데이터와 상관없이 언제나 돕니다.
+_TMP = Path(tempfile.mkdtemp(prefix="bizdash-verify-"))
+os.environ["DATABASE_URL"] = f"sqlite+pysqlite:///{_TMP}/verify.db"
 
 from app.core.calc import calc_actual, calc_planned, calc_status  # noqa: E402
 from app.core.config import KST                                    # noqa: E402
@@ -145,7 +154,23 @@ def verify_timezone() -> None:
     check(biggest <= 1, f"차이는 최대 {biggest}%p 입니다 (2%p 이상이면 원인을 확인해야 합니다)")
 
 
+def prepare() -> None:
+    """임시 데이터베이스에 프로토타입 시드를 넣습니다."""
+    from app.db.session import Base, engine
+
+    Base.metadata.create_all(engine)
+    r = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "seed" / "load_seed.py")],
+        capture_output=True, text=True, cwd=ROOT,
+        env={**os.environ},
+    )
+    if r.returncode != 0:
+        print("시드를 넣지 못했습니다:\n" + r.stdout + r.stderr)
+        raise SystemExit(1)
+
+
 if __name__ == "__main__":
+    prepare()
     verify_periods()
     verify_dashboard()
     verify_timezone()
