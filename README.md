@@ -7,7 +7,7 @@
 |---|---|
 | 백엔드 | FastAPI (Python) |
 | 프론트엔드 | React + TypeScript (Vite) |
-| 데이터베이스 | SQLite (`data/bizdash.db`) |
+| 데이터베이스 | PostgreSQL 16 (운영) · SQLite (개발 PC) |
 | 공고 수집 | 화면의 [지금 수집] 버튼으로 실행 |
 
 **설치하려면 [docs/설치방법.txt](docs/설치방법.txt) 를 보세요.**
@@ -17,7 +17,7 @@
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r backend/requirements.txt
+.venv/bin/pip install -r requirements.txt
 cd frontend && npm install && cd ..
 cp .env.example .env
 .venv/bin/python scripts/set_password.py
@@ -26,7 +26,8 @@ cp .env.example .env
 ## 실행
 
 ```bash
-./scripts/dev.sh
+./scripts/dev.sh                                  # macOS · Linux
+powershell -ExecutionPolicy Bypass -File scripts/dev.ps1   # Windows
 ```
 
 화면은 http://localhost:5173 에서 봅니다. `/api` 요청은 백엔드(8000)로 넘어갑니다.
