@@ -30,10 +30,6 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       CORS_ORIGINS: ""
-      # 공고 자동 수집. 기본은 꺼져 있고 화면의 [지금 수집] 으로만 받습니다.
-      # 자동으로 돌리려면 true. 서버를 여러 대로 늘리면 한 대에서만 켜세요.
-      COLLECTOR_ENABLED: ${COLLECTOR_ENABLED:-false}
-      COLLECTOR_CRON: ${COLLECTOR_CRON:-0 6 * * 1,4}
       TZ: Asia/Seoul
     ports:
       - "8000:8000"

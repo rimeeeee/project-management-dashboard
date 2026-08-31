@@ -40,8 +40,6 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173"
 
-    collector_enabled: bool = False
-    collector_cron: str = "0 6 * * 1,4"
 
     # 기관 게시판(인재원·진흥원·의료정보원)을 며칠 전 게시물까지 가져올지.
     # 공고는 연 단위 사업 주기라 '작년 이맘때 공고'를 찾는 일이 있어 1년으로 둡니다.

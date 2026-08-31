@@ -19,7 +19,6 @@
   SQLAlchemy       2.0.52    데이터베이스 접근
   Alembic          1.19.1    표 구조가 바뀔 때 반영
   Pydantic         2.13.4    입력값 검증
-  APScheduler      3.11.3    공고 자동 수집 예약
   argon2-cffi      25.1.0    비밀번호 암호화
   itsdangerous     2.2.0     로그인 쿠키 위조 방지
 

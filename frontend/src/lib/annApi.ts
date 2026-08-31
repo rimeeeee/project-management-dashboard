@@ -44,8 +44,6 @@ export interface AnnPage {
 }
 
 export interface CollectorStatus {
-  enabled: boolean;
-  cron: string;
   last: null | {
     startedAt: string;
     finishedAt: string;

@@ -18,7 +18,6 @@ from fastapi.staticfiles import StaticFiles
 # settings 는 아래 설정값 변수(settings = get_settings())와 이름이 겹치므로 별칭을 씁니다
 from app.api import announcements, auth, entries, projects, register
 from app.api import settings as settings_api
-from app.collector import scheduler
 from app.core.config import ROOT, get_settings
 
 log = logging.getLogger("bizdash")
@@ -63,11 +62,7 @@ async def lifespan(_: FastAPI):
         log.warning("SECRET_KEY 가 기본값입니다. 운영에 올리기 전에 반드시 바꾸세요.")
     log.info("데이터베이스: %s", "SQLite (로컬)" if settings.is_sqlite else "PostgreSQL")
     ensure_tables()
-    scheduler.start()
-    try:
-        yield
-    finally:
-        scheduler.stop()
+    yield
 
 
 app = FastAPI(title="사업관리 대시보드", version="0.1.0", lifespan=lifespan)
