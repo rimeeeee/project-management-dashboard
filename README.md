@@ -76,12 +76,10 @@ cd backend && ../.venv/bin/python -m pytest      # 저장·충돌·이력
 | [docs/기술스택.txt](docs/기술스택.txt) | 쓰인 기술과 버전, 배포 전 확인 사항 |
 | [docs/공고수집.md](docs/공고수집.md) | 수집 구조 · NTIS 옵션 실측 결과 |
 
-두 txt 는 손으로 적은 것이 아니라 실제 폴더와 설치된 버전을 읽어 만듭니다.
-구조나 라이브러리가 바뀌면 다시 만들어 주세요.
+폴더구조.txt 는 실제 폴더를 읽어 만듭니다. 파일을 추가했다면 다시 만들어 주세요.
 
 ```bash
 .venv/bin/python scripts/docs/폴더구조_만들기.py
-.venv/bin/python scripts/docs/기술스택_만들기.py
 ```
 
 ## 알아둘 것
