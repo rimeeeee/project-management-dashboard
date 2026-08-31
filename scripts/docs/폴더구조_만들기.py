@@ -36,8 +36,8 @@ NOTE = {
  "docs/prototype":"확정된 디자인 시안 (요구사항 원본)",
  "docs/ntis":"NTIS 응답 원문 (연동 근거 자료)",
  "data":"개발용 데이터베이스 (서버에서는 PostgreSQL 사용)",
- "Dockerfile":"서비스 이미지 만드는 설명서",
- "docker-compose.yml":"서비스 + 데이터베이스 실행 설정 ★배포 시 사용",
+ "Dockerfile":"(Docker 로 올릴 경우에만 씀)",
+ "docker-compose.yml":"(Docker 로 올릴 경우에만 씀)",
  ".env.example":"설정 항목 견본 ★배포 시 복사해서 사용",
  "README.md":"개발자용 안내",
 }
@@ -91,11 +91,12 @@ doc = f"""================================================================
 │ 배포할 때 보실 파일은 3개뿐입니다                             │
 └──────────────────────────────────────────────────────────────┘
 
-  .env.example          설정 견본 — .env 로 복사해서 값을 채웁니다
-  docker-compose.yml    이걸로 실행합니다 (docker compose up -d --build)
-  scripts/set_password.py   비밀번호를 정합니다
+  .env.example              설정 견본 — .env 로 복사해서 값을 채웁니다
+  scripts/set_password.py   로그인 비밀번호를 정합니다
+  backend/requirements.txt  설치할 파이썬 라이브러리 목록
 
-  자세한 순서는 docs/기술스택.txt 의 '배포 방법' 을 보세요.
+  설치 순서는 docs/기술스택.txt 의 '설치 방법' 을 보세요.
+  (Dockerfile 과 docker-compose.yml 도 있지만 쓰지 않아도 됩니다)
 
 
 ================================================================
