@@ -84,9 +84,8 @@
 │   └── 폴더구조.txt
 ├── frontend/                                 React + TypeScript 화면
 │   ├── public/
-│   │   ├── brand/                            로고
-│   │   │   └── logo.svg
-│   │   └── prototype.html                    프로토타입 (나란히 비교용)
+│   │   └── brand/                            로고
+│   │       └── logo.svg
 │   ├── src/
 │   │   ├── components/                       화면 조각
 │   │   │   ├── AnnForm.tsx
@@ -125,7 +124,6 @@
 ├── scripts/                                  운영 · 개발 도구
 │   ├── docs/
 │   │   ├── README.md
-│   │   ├── 기술스택_만들기.py
 │   │   └── 폴더구조_만들기.py
 │   ├── probe/                                NTIS 필드 조사용
 │   │   └── ntis.py
