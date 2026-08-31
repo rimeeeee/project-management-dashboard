@@ -5,6 +5,10 @@
  이 폴더를 처음 받으신 분을 위한 안내입니다.
  순서대로 따라 하시면 됩니다.
 
+ ※ 명령은 Windows 기준입니다. macOS · Linux 에서는
+   .venv\Scripts\python.exe  →  .venv/bin/python
+   copy  →  cp,   python  →  python3   으로 바꿔 읽으세요.
+
 
 ┌──────────────────────────────────────────────────────────────┐
 │ 먼저 준비해 주세요                                            │
@@ -22,7 +26,7 @@
 
   설치되어 있는지 확인:
 
-      python3 --version
+      python --version
       git --version
 
 
@@ -43,19 +47,14 @@
 
 ─── 2단계.  파이썬 준비 ────────────────────────────────────────
 
-    python3 -m venv .venv
-    .venv/bin/pip install -r requirements.txt
-
-  Windows 라면:
-
     python -m venv .venv
     .venv\Scripts\pip install -r requirements.txt
 
 
 ─── 3단계.  설정 파일 만들기 ───────────────────────────────────
 
-    cp .env.example .env
-    .venv/bin/python scripts/set_password.py
+    copy .env.example .env
+    .venv\Scripts\python.exe scripts\set_password.py
 
   set_password.py 를 돌리면 로그인 비밀번호를 정할 수 있습니다.
   입력한 비밀번호는 암호화되어 .env 에 저장되고, 원문은 남지 않습니다.
@@ -65,7 +64,7 @@
 
   만드는 법:
 
-      .venv/bin/python -c "import secrets;print(secrets.token_urlsafe(48))"
+      .venv\Scripts\python.exe -c "import secrets;print(secrets.token_urlsafe(48))"
 
   나온 값을 .env 의 SECRET_KEY= 뒤에 붙여넣습니다.
 
@@ -105,13 +104,14 @@
 
 ─── 5단계.  실행 ───────────────────────────────────────────────
 
-    cd backend
-    ../.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
-
-  Windows 라면:
-
+    $env:PYTHONUTF8 = "1"
     cd backend
     ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  ※ 위는 PowerShell 기준입니다. 명령 프롬프트(cmd)에서는
+    첫 줄을  set PYTHONUTF8=1  로 씁니다.
+    이 값을 빼면 로그의 한글이 깨져 읽을 수 없습니다.
+    서비스로 등록할 때도 같은 값이 필요합니다(아래 Windows 절 참고).
 
   브라우저에서 아래 주소로 들어갑니다.
 
@@ -397,11 +397,12 @@
       빠진 것입니다.
 
   ▷ 비밀번호를 잊었습니다
-      .venv/bin/python scripts/set_password.py 로 다시 정하면 됩니다.
+      .venv\Scripts\python.exe scripts\set_password.py 로 다시 정하면 됩니다.
 
   ▷ 로그인 화면으로 돌아가고 싶습니다
       주소 뒤에 ?logout 을 붙입니다.  예) http://localhost:8000/?logout
 
   ▷ 잘 돌아가는지 확인하고 싶습니다
-      cd backend && ../.venv/bin/python -m pytest
+      cd backend
+      ..\.venv\Scripts\python.exe -m pytest
       → 72건 전부 통과하면 정상입니다.
