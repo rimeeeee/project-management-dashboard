@@ -1,0 +1,201 @@
+================================================================
+ 사업관리 대시보드 — 설치 방법
+================================================================
+
+ 이 폴더를 처음 받으신 분을 위한 안내입니다.
+ 순서대로 따라 하시면 됩니다.
+
+
+┌──────────────────────────────────────────────────────────────┐
+│ 먼저 준비해 주세요                                            │
+└──────────────────────────────────────────────────────────────┘
+
+  Python      3.12 이상       필수
+  Node.js     20 이상         필수 (화면을 만들 때 한 번만 씁니다)
+  PostgreSQL  14 이상         운영용
+                              ※ 없어도 됩니다. 없으면 파일 하나로
+                                동작하는 SQLite 로 바로 쓸 수 있습니다.
+
+  설치되어 있는지 확인:
+
+      python3 --version
+      node --version
+
+
+┌──────────────────────────────────────────────────────────────┐
+│ 설치 (5단계, 10분이면 됩니다)                                 │
+└──────────────────────────────────────────────────────────────┘
+
+
+─── 1단계.  화면 만들기 ────────────────────────────────────────
+
+    cd frontend
+    npm install
+    npm run build
+    cd ..
+
+  → frontend/dist 폴더가 생깁니다. 이게 실제 화면입니다.
+
+  ※ 이 폴더에는 만들어진 화면이 들어 있지 않습니다.
+    (소스만 들어 있고, 만드는 것은 각자 환경에서 합니다)
+
+  ※ 인터넷이 안 되는 서버라면, 인터넷 되는 PC 에서 위 명령을 돌린 뒤
+    frontend/dist 폴더만 서버의 같은 위치로 복사하면 됩니다.
+
+
+─── 2단계.  파이썬 준비 ────────────────────────────────────────
+
+    python3 -m venv .venv
+    .venv/bin/pip install -r backend/requirements.txt
+
+  Windows 라면:
+
+    python -m venv .venv
+    .venv\Scripts\pip install -r backend\requirements.txt
+
+
+─── 3단계.  설정 파일 만들기 ───────────────────────────────────
+
+    cp .env.example .env
+    .venv/bin/python scripts/set_password.py
+
+  set_password.py 를 돌리면 로그인 비밀번호를 정할 수 있습니다.
+  입력한 비밀번호는 암호화되어 .env 에 저장되고, 원문은 남지 않습니다.
+
+  그다음 .env 파일을 열어 SECRET_KEY 를 바꿔 주세요.
+  (로그인 쿠키를 암호화하는 값입니다. 기본값 그대로 두면 위험합니다)
+
+  만드는 법:
+
+      .venv/bin/python -c "import secrets;print(secrets.token_urlsafe(48))"
+
+  나온 값을 .env 의 SECRET_KEY= 뒤에 붙여넣습니다.
+
+
+─── 4단계.  데이터베이스 정하기 ────────────────────────────────
+
+  ▷ 그냥 써보실 거면 (SQLite)
+
+    아무것도 안 하셔도 됩니다. .env 의 기본값이 SQLite 입니다.
+    data 폴더에 파일 하나로 저장됩니다.
+
+  ▷ 운영으로 쓰실 거면 (PostgreSQL)
+
+    PostgreSQL 에 접속해서 데이터베이스와 계정을 만듭니다.
+
+        CREATE DATABASE bizdash;
+        CREATE USER bizdash WITH PASSWORD '정하실_비밀번호';
+        GRANT ALL PRIVILEGES ON DATABASE bizdash TO bizdash;
+
+    PostgreSQL 15 이상이면 아래도 함께 실행해 주세요.
+
+        \c bizdash
+        GRANT ALL ON SCHEMA public TO bizdash;
+
+    그리고 .env 의 DATABASE_URL 을 아래처럼 바꿉니다.
+
+        DATABASE_URL=postgresql+psycopg://bizdash:정하신_비밀번호@localhost:5432/bizdash
+
+  ※ 어느 쪽이든 표(테이블)는 처음 실행할 때 자동으로 만들어집니다.
+
+
+─── 5단계.  실행 ───────────────────────────────────────────────
+
+    cd backend
+    ../.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  브라우저에서 아래 주소로 들어갑니다.
+
+      http://localhost:8000              (같은 PC 에서)
+      http://서버주소:8000                (다른 PC 에서)
+
+  3단계에서 정한 비밀번호로 로그인하면 됩니다.
+
+
+┌──────────────────────────────────────────────────────────────┐
+│ 처음 들어가면 이렇게 하세요                                   │
+└──────────────────────────────────────────────────────────────┘
+
+  1. [사업 현황 (공고)] → [지금 수집]
+       기관 4곳에서 공고를 받아옵니다. 300건 이상, 1분 이내.
+
+  2. [신규 사업 등록]
+       관리할 사업을 등록합니다.
+       공고 목록에서 [사업 등록] 을 눌러도 됩니다.
+       (공고명·발주처·금액이 자동으로 채워집니다)
+
+
+┌──────────────────────────────────────────────────────────────┐
+│ 서버에서 계속 돌리려면 (리눅스)                               │
+└──────────────────────────────────────────────────────────────┘
+
+  위 5단계는 터미널을 닫으면 멈춥니다.
+  재부팅 후에도 자동으로 켜지게 하려면 아래처럼 등록합니다.
+
+  /etc/systemd/system/bizdash.service 파일을 만듭니다.
+  (경로와 사용자 이름은 실제 환경에 맞게 고쳐 주세요)
+
+      [Unit]
+      Description=사업관리 대시보드
+      After=network.target postgresql.service
+
+      [Service]
+      User=bizdash
+      WorkingDirectory=/opt/bizdash/backend
+      EnvironmentFile=/opt/bizdash/.env
+      ExecStart=/opt/bizdash/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+      Restart=always
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+
+  등록하고 시작합니다.
+
+      sudo systemctl daemon-reload
+      sudo systemctl enable --now bizdash
+      sudo systemctl status bizdash
+
+  로그 보기:
+
+      sudo journalctl -u bizdash -f
+
+
+┌──────────────────────────────────────────────────────────────┐
+│ https 로 서비스하려면 (선택)                                  │
+└──────────────────────────────────────────────────────────────┘
+
+  앞단에 Nginx 를 두고 8000 포트로 넘겨 주시면 됩니다.
+
+      location / {
+          proxy_pass http://127.0.0.1:8000;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
+
+  이 경우 .env 에서 COOKIE_SECURE=true 로 바꿔 주세요.
+
+
+┌──────────────────────────────────────────────────────────────┐
+│ 문제가 생기면                                                 │
+└──────────────────────────────────────────────────────────────┘
+
+  ▷ 화면이 안 뜨고 글자만 나옵니다
+      1단계(화면 만들기)를 안 하셨을 가능성이 큽니다.
+      frontend/dist 폴더가 있는지 확인해 주세요.
+
+  ▷ 공고 수집이 안 됩니다
+      서버가 외부 인터넷에 나갈 수 있어야 합니다.
+      아래 4곳에 접속되는지 확인해 주세요.
+          www.khidi.or.kr    www.kohi.or.kr
+          www.khis.kr        www.ntis.go.kr
+
+  ▷ 비밀번호를 잊었습니다
+      .venv/bin/python scripts/set_password.py 로 다시 정하면 됩니다.
+
+  ▷ 로그인 화면으로 돌아가고 싶습니다
+      주소 뒤에 ?logout 을 붙입니다.  예) http://localhost:8000/?logout
+
+  ▷ 잘 돌아가는지 확인하고 싶습니다
+      cd backend && ../.venv/bin/python -m pytest
+      → 72건 전부 통과하면 정상입니다.

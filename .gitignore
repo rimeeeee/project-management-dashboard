@@ -24,3 +24,6 @@ debug_*.xml
 .DS_Store
 tsconfig.tsbuildinfo
 frontend/tsconfig.tsbuildinfo
+
+# 배포 패키지 (scripts/make_package.sh 로 만듭니다)
+bizdash-배포.tar.gz

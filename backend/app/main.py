@@ -27,6 +27,28 @@ settings = get_settings()
 DIST = ROOT / "frontend" / "dist"
 
 
+def ensure_tables() -> None:
+    """
+    표가 없으면 만듭니다.
+
+    처음 설치할 때 사람이 따로 명령을 돌리지 않아도 되게 하려는 것입니다.
+    (실제로 이게 없어서 새 서버에서 첫 요청이 'no such table' 로 실패했습니다)
+
+    이미 있는 표는 건드리지 않습니다. 나중에 표 구조가 바뀌는 경우에는
+    alembic upgrade head 로 반영합니다.
+    """
+    from sqlalchemy import inspect
+
+    from app.db.session import Base, engine
+    import app.models  # noqa: F401  — 표 정의를 등록합니다
+
+    before = set(inspect(engine).get_table_names())
+    Base.metadata.create_all(engine)
+    made = set(inspect(engine).get_table_names()) - before
+    if made:
+        log.info("표 %d개를 새로 만들었습니다.", len(made))
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     logging.basicConfig(
@@ -40,6 +62,7 @@ async def lifespan(_: FastAPI):
     if settings.secret_key.startswith("dev-only"):
         log.warning("SECRET_KEY 가 기본값입니다. 운영에 올리기 전에 반드시 바꾸세요.")
     log.info("데이터베이스: %s", "SQLite (로컬)" if settings.is_sqlite else "PostgreSQL")
+    ensure_tables()
     scheduler.start()
     try:
         yield
