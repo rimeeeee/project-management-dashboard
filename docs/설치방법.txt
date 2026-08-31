@@ -78,7 +78,11 @@
      자동 등록되므로 재부팅 후에도 알아서 켜집니다.
 
   2) 이 프로그램이 쓸 계정과 데이터베이스를 만듭니다.
-     (psql 또는 pgAdmin 에서)
+
+     아래 psql·pg_dump 명령은 PostgreSQL 의 bin 폴더에 있습니다.
+     경로째 쓰거나(예: "C:\Program Files\PostgreSQL\16\bin\psql.exe"),
+     그 폴더를 PATH 에 넣어 두면 이름만으로 쓸 수 있습니다.
+     pgAdmin 을 쓰면 명령 없이 화면에서 만들 수도 있습니다.
 
          CREATE USER bizdash WITH PASSWORD '정한비밀번호';
          CREATE DATABASE bizdash OWNER bizdash;
@@ -88,8 +92,26 @@
          DATABASE_URL=postgresql+psycopg://bizdash:정한비밀번호@localhost:5432/bizdash
 
   4) 바깥에서 데이터베이스에 직접 붙지 못하게 막아 둡니다.
-     postgresql.conf 의 listen_addresses 를 localhost 로 둡니다.
-     (설치 기본값이 localhost 이므로 대개 그대로 두면 됩니다)
+
+     설치 직후에는 listen_addresses 가 '*' 라서 5432 포트가
+     네트워크 쪽으로 열려 있습니다. 확인해 보세요.
+
+         netstat -ano | findstr ":5432"
+
+     0.0.0.0:5432 로 나오면 열려 있는 것입니다.
+     postgresql.conf 를 열어 아래처럼 고치고 서비스를 다시 시작합니다.
+     (C:\Program Files\PostgreSQL\16\data\postgresql.conf)
+
+         listen_addresses = 'localhost'
+
+     관리자 명령 창에서:
+
+         net stop postgresql-x64-16
+         net start postgresql-x64-16
+
+     ※ pg_hba.conf 가 기본으로 127.0.0.1 만 허용하므로 이대로 두어도
+       바깥에서 붙지는 못합니다. 그래도 포트를 아예 열어 두지 않는
+       편이 안전합니다.
 
   표(테이블)는 처음 실행할 때 자동으로 만들어집니다.
 
@@ -98,8 +120,25 @@
          pg_dump -U bizdash -Fc bizdash > bizdash_2026-08-31.dump
 
   ※ 받아 두는 것보다 '되돌려 보는 것' 이 중요합니다.
-    처음 한 번은 다른 폴더에 복구해 보고 자료가 살아나는지
-    확인해 두세요. 그래야 진짜 백업입니다.
+    처음 한 번은 아래처럼 다른 데이터베이스에 복구해 보고
+    자료가 살아나는지 확인해 두세요. 그래야 진짜 백업입니다.
+
+    복구용 데이터베이스를 만듭니다. bizdash 계정에는 이 권한이
+    없으므로 postgres 로 만듭니다.
+
+         psql -U postgres -c "CREATE DATABASE bizdash_restore OWNER bizdash"
+
+    받아 둔 파일을 그 데이터베이스에 되돌립니다.
+
+         pg_restore -U bizdash -d bizdash_restore bizdash_2026-08-31.dump
+
+    자료가 살아났는지 세어 봅니다.
+
+         psql -U bizdash -d bizdash_restore -c "SELECT count(*) FROM announcements"
+
+    확인이 끝나면 연습용 데이터베이스는 지웁니다.
+
+         psql -U postgres -c "DROP DATABASE bizdash_restore"
 
 
 ─── 5단계.  실행 ───────────────────────────────────────────────
@@ -351,6 +390,7 @@
         bizdash-service.exe start
 
     자료까지 되돌려야 하면 1) 에서 받아 둔 백업을 복구합니다.
+    복구 방법은 4단계 백업 항목의 pg_restore 를 보세요.
 
 
 ┌──────────────────────────────────────────────────────────────┐
