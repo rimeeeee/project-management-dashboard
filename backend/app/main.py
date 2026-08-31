@@ -85,10 +85,23 @@ def health() -> JSONResponse:
 if DIST.is_dir():
     app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
 
+    # dist 폴더의 진짜 위치. 아래에서 '이 안에 있는 파일인지' 판단하는 기준입니다.
+    DIST_REAL = DIST.resolve()
+
     @app.get("/{full_path:path}")
     def spa(full_path: str) -> FileResponse:
-        # 화면 주소는 프론트엔드가 처리하므로 무엇이 오든 index.html 을 돌려줍니다.
-        candidate = DIST / full_path
-        if full_path and candidate.is_file():
+        """
+        화면 주소는 프론트엔드가 처리하므로, 실제 파일이 아니면 index.html 을 돌려줍니다.
+
+        주소에 ../ 를 넣어 dist 폴더 바깥의 파일을 가져가려는 시도를 막아야 합니다.
+        실제로 /..%2F..%2F.env 로 .env 파일(비밀번호 해시·SECRET_KEY 가 든 파일)이
+        로그인 없이 읽히는 것을 확인했습니다.
+
+        경로를 실제 위치로 풀어서(resolve) dist 안에 있는지 확인합니다.
+        %2F 처럼 인코딩해서 넣어도 여기서 걸립니다.
+        """
+        candidate = (DIST / full_path).resolve()
+        inside = candidate == DIST_REAL or DIST_REAL in candidate.parents
+        if full_path and inside and candidate.is_file():
             return FileResponse(candidate)
         return FileResponse(DIST / "index.html")
