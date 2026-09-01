@@ -9,7 +9,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Pager from "../components/Pager";
 import { annApi, type Ann, type AnnPage, type CollectorStatus } from "../lib/annApi";
-import { describeCron } from "../lib/cron";
 import { fmtEok } from "../lib/format";
 import type { AppSettings } from "../lib/types";
 import "../styles/pager.css";
@@ -160,9 +159,6 @@ export default function Announcements({
         {잘림 && <span style={{ color: "var(--warn-ink)" }}>· 일부 서버가 응답을 끊었습니다</span>}
         {실패.length > 0 && (
           <span style={{ color: "var(--crit-ink)" }}>· {실패.map((s) => s.name).join(", ")} 실패</span>
-        )}
-        {collector?.enabled && (
-          <span style={{ color: "var(--muted)" }}>· 자동 수집 {describeCron(collector.cron)}</span>
         )}
         <span className="spacer" />
         <button type="button" className="mini-btn" onClick={runCollector} disabled={busy}>

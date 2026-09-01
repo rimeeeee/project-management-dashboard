@@ -13,6 +13,9 @@ import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
+for _s in (sys.stdout, sys.stderr):        # Windows 콘솔(cp949)에서 한글이 깨지지 않게
+    _s.reconfigure(encoding="utf-8")
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
@@ -35,7 +38,7 @@ FAIL = False
 
 def node(script: str) -> str:
     return subprocess.run(
-        ["node", str(HERE / script)], capture_output=True, text=True, check=True, cwd=HERE
+        ["node", str(HERE / script)], capture_output=True, encoding="utf-8", check=True, cwd=HERE
     ).stdout
 
 
@@ -135,7 +138,7 @@ def prepare() -> None:
     Base.metadata.create_all(engine)
     r = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "seed" / "load_seed.py")],
-        capture_output=True, text=True, cwd=ROOT,
+        capture_output=True, encoding="utf-8", cwd=ROOT,
         env={**os.environ},
     )
     if r.returncode != 0:

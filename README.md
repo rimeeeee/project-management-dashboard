@@ -7,7 +7,7 @@
 |---|---|
 | 백엔드 | FastAPI (Python) |
 | 프론트엔드 | React + TypeScript (Vite) |
-| 데이터베이스 | SQLite (`data/bizdash.db`) |
+| 데이터베이스 | PostgreSQL 16 (운영) · SQLite (개발 PC) |
 | 공고 수집 | 화면의 [지금 수집] 버튼으로 실행 |
 
 **설치하려면 [docs/설치방법.txt](docs/설치방법.txt) 를 보세요.**
@@ -17,7 +17,7 @@
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r backend/requirements.txt
+.venv/bin/pip install -r requirements.txt
 cd frontend && npm install && cd ..
 cp .env.example .env
 .venv/bin/python scripts/set_password.py
@@ -26,7 +26,8 @@ cp .env.example .env
 ## 실행
 
 ```bash
-./scripts/dev.sh
+./scripts/dev.sh                                  # macOS · Linux
+powershell -ExecutionPolicy Bypass -File scripts/dev.ps1   # Windows
 ```
 
 화면은 http://localhost:5173 에서 봅니다. `/api` 요청은 백엔드(8000)로 넘어갑니다.
@@ -76,7 +77,8 @@ cd backend && ../.venv/bin/python -m pytest      # 저장·충돌·이력·보�
 ```bash
 scripts/set_password.py         로그인 비밀번호 변경
 scripts/ntis_backfill.py        NTIS 지난 공고 채우기 (--days 180)
-scripts/make_package.sh         서버에 올릴 파일만 모아 압축
+scripts/release.ps1             서버에 올릴 준비 (테스트·시안대조·화면빌드)
+scripts/make_package.sh         파일로 옮겨야 할 때만 — 압축본 만들기
 scripts/seed/load_seed.py       개발용 예시 자료 넣기 (서버에서 쓰지 마세요)
 scripts/seed/clear_examples.py  예시 자료 지우기
 scripts/docs/폴더구조_만들기.py  docs/폴더구조.txt 다시 만들기

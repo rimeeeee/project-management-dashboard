@@ -157,13 +157,8 @@ def collector_status(db: Session = Depends(get_db)) -> dict[str, Any]:
     마지막 수집이 언제 돌았고 몇 건 걷혔는지.
     수집이 조용히 멈춰 있는데 아무도 모르는 상황이 제일 위험합니다.
     """
-    from app.core.config import get_settings
-
     last = db.query(CollectorRun).order_by(CollectorRun.id.desc()).first()
-    s = get_settings()
     return {
-        "enabled": s.collector_enabled,
-        "cron": s.collector_cron,
         "last": None if last is None else {
             "startedAt": kst_iso(last.started_at),
             "finishedAt": kst_iso(last.finished_at),

@@ -15,8 +15,7 @@
 │   │   └── main.py                 서비스 시작점
 │   ├── tests/                      자동 테스트
 │   ├── alembic.ini
-│   ├── pytest.ini
-│   └── requirements.txt            설치할 파이썬 라이브러리
+│   └── pytest.ini
 ├── data/                           자료 저장 (bizdash.db)
 ├── docs/                           문서
 │   ├── ntis/                       NTIS 응답 원문
@@ -26,6 +25,7 @@
 │   ├── 설치방법.txt
 │   └── 폴더구조.txt
 ├── frontend/                       화면 (React)
+│   ├── dist/                       만들어진 화면 — 서버가 이것을 내보냅니다
 │   ├── public/                     로고·글꼴
 │   ├── src/
 │   │   ├── components/             화면 구성 요소
@@ -43,11 +43,13 @@
 │   ├── probe/                      NTIS 응답 형식 조사
 │   ├── seed/                       개발용 예시 자료
 │   ├── verify/                     디자인 시안 대조 검증 ★
-│   ├── dev.sh                      개발 서버 실행
+│   ├── dev.ps1                     개발 서버 실행 (Windows)
+│   ├── dev.sh                      개발 서버 실행 (macOS·Linux)
 │   ├── fetch_fonts.py              글꼴 내려받기
 │   ├── make_package.sh             서버에 올릴 파일만 모아 압축
 │   ├── ntis_backfill.py            NTIS 지난 공고 채우기
+│   ├── release.ps1                 서버에 올릴 준비
 │   └── set_password.py             비밀번호 변경
 ├── .env.example                    설정 견본 — .env 로 복사해서 씁니다
-└── README.md                       개발자용 안내
-
+├── README.md                       개발자용 안내
+└── requirements.txt                설치할 파이썬 라이브러리

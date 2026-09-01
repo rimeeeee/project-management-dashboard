@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+alembic
+psycopg[binary]
+pydantic-settings
+argon2-cffi
+itsdangerous
+certifi
+
+# 테스트용 — 서버 운영에는 쓰이지 않지만 파일을 하나로 두려고 여기 넣습니다.
+pytest
+httpx

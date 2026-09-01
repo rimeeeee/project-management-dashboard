@@ -25,6 +25,7 @@ cp -r frontend/dist "$OUT/frontend/"
 cp scripts/set_password.py    "$OUT/scripts/"      # 비밀번호 정하기
 cp scripts/ntis_backfill.py   "$OUT/scripts/"      # 지난 공고 채우기(선택)
 cp .env.example               "$OUT/"
+cp requirements.txt           "$OUT/"      # 설치할 파이썬 라이브러리
 
 find "$OUT" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 find "$OUT" -name "*.pyc" -delete 2>/dev/null || true
