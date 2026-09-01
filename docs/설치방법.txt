@@ -152,6 +152,10 @@
     이 값을 빼면 로그의 한글이 깨져 읽을 수 없습니다.
     서비스로 등록할 때도 같은 값이 필요합니다(아래 Windows 절 참고).
 
+  ※ 여기서는 8000 번으로 잠깐 띄웁니다. 진짜로 서비스를 올릴 때는
+    주소에 :8000 을 붙이지 않도록 80 번을 씁니다(아래 Windows 절). 둘 중
+    어느 포트가 보이더라도 같은 앱입니다.
+
   브라우저에서 아래 주소로 들어갑니다.
 
       http://localhost:8000              (같은 PC 에서)
@@ -240,6 +244,12 @@
          bizdash-service.exe stop
          bizdash-service.exe uninstall
 
+     ※ uninstall 은 반드시 stop 다음에 하세요. 멈추지 않고 지우면
+       앱이 그대로 떠서 포트를 잡고 있어, 다음에 다시 설치할 때
+       포트 충돌로 막힙니다. 이럴 때는 작업 관리자에서 python 을
+       끝내거나  Get-NetTCPConnection -LocalPort 80 -State Listen 으로
+       찾아 종료합니다.
+
      로그는 같은 폴더에 bizdash-service.out.log 로 쌓입니다.
 
 
@@ -273,27 +283,63 @@
   6) 백업 자동화
 
      PostgreSQL 은 파일 복사로 백업되지 않습니다. pg_dump 를 씁니다.
-     아래를 backup.bat 으로 만들고 작업 스케줄러에 매일 등록하세요.
+     자동으로 돌게 하려면 두 가지가 필요합니다.
 
-         @echo off
-         set D=%date:~0,4%-%date:~5,2%-%date:~8,2%
-         "C:\Program Files\PostgreSQL\16\bin\pg_dump.exe" ^
-           -U bizdash -Fc bizdash > "D:\backup\bizdash_%D%.dump"
+     (가) 비밀번호를 파일에 저장 — 안 하면 스케줄러에서 멈춥니다
 
-     ※ 받아만 두고 끝내지 마세요.
-       처음 한 번은 실제로 복구해 보고 자료가 살아나는지
-       확인해야 진짜 백업입니다.
+       자동 실행 때는 비밀번호를 물어볼 사람이 없습니다. pg_dump 가
+       비밀번호를 기다리다 그대로 멈춰 백업이 안 됩니다. bizdash 계정의
+       비밀번호를 pgpass 파일에 미리 넣어 둡니다.
+
+       메모장으로 아래 파일을 만듭니다. (한 줄, 폴더가 없으면 만드세요)
+
+           %APPDATA%\postgresql\pgpass.conf
+
+       내용 (형식: 호스트:포트:DB:계정:비밀번호):
+
+           localhost:5432:bizdash:bizdash:정한비밀번호
+
+     (나) backup.bat 을 만들고 작업 스케줄러에 매일 등록
+
+       아래를 C:\bizdash\backup.bat 으로 저장합니다.
+       (경로·저장 위치는 실제 환경에 맞게)
+
+           @echo off
+           set D=%date:~0,4%-%date:~5,2%-%date:~8,2%
+           "C:\Program Files\PostgreSQL\16\bin\pg_dump.exe" ^
+             -U bizdash -h localhost -w -Fc bizdash > "C:\backup\bizdash_%D%.dump"
+
+       -w 는 '비밀번호를 묻지 말라' 는 뜻입니다. (가) 의 pgpass 를 씁니다.
+       저장 폴더(C:\backup)는 미리 만들어 두세요.
+
+       관리자 명령 창에서 매일 새벽 3시에 돌도록 등록합니다.
+
+           schtasks /create /tn "bizdash 백업" /tr "C:\bizdash\backup.bat" ^
+             /sc daily /st 03:00 /ru SYSTEM
+
+       등록됐는지 확인 · 지금 바로 한 번 실행해 보기:
+
+           schtasks /query /tn "bizdash 백업"
+           schtasks /run   /tn "bizdash 백업"
+
+       실행 후 C:\backup 에 .dump 파일이 생기면 정상입니다.
+
+     ※ 받아만 두고 끝내지 마세요. 처음 한 번은 실제로 복구해 보고
+       자료가 살아나는지 확인해야 진짜 백업입니다.
+       복구 방법은 4단계 백업 항목의 pg_restore 를 보세요.
+
+     ※ 오래된 덤프는 쌓이기만 합니다. 디스크가 찰 수 있으니
+       가끔 지우거나, 지난 것을 지우는 줄을 backup.bat 에 더하세요.
 
 
 ┌──────────────────────────────────────────────────────────────┐
-│ 서버에서 계속 돌리려면 (리눅스)                               │
+│ (참고) 리눅스 서버라면                                        │
 └──────────────────────────────────────────────────────────────┘
 
-  위 5단계는 터미널을 닫으면 멈춥니다.
-  재부팅 후에도 자동으로 켜지게 하려면 아래처럼 등록합니다.
-
-  /etc/systemd/system/bizdash.service 파일을 만듭니다.
-  (경로와 사용자 이름은 실제 환경에 맞게 고쳐 주세요)
+  이 서버는 Windows 라 위의 'Windows' 절을 따르면 됩니다.
+  혹시 리눅스에 올릴 일이 있으면 WinSW 대신 systemd 를 씁니다.
+  /etc/systemd/system/bizdash.service 를 아래처럼 만들고
+  (경로·사용자·포트는 실제 환경에 맞게):
 
       [Unit]
       Description=사업관리 대시보드
@@ -303,6 +349,7 @@
       User=bizdash
       WorkingDirectory=/opt/bizdash/backend
       EnvironmentFile=/opt/bizdash/.env
+      Environment=PYTHONUTF8=1
       ExecStart=/opt/bizdash/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
       Restart=always
       RestartSec=5
@@ -310,16 +357,11 @@
       [Install]
       WantedBy=multi-user.target
 
-  등록하고 시작합니다.
+  등록 · 시작 · 로그:
 
       sudo systemctl daemon-reload
       sudo systemctl enable --now bizdash
-      sudo systemctl status bizdash
-
-  로그 보기:
-
       sudo journalctl -u bizdash -f
-
 
 ┌──────────────────────────────────────────────────────────────┐
 │ 고친 뒤 서버에 반영하기                                       │
@@ -397,16 +439,19 @@
 │ https 로 서비스하려면 (선택)                                  │
 └──────────────────────────────────────────────────────────────┘
 
-  앞단에 Nginx 를 두고 8000 포트로 넘겨 주시면 됩니다.
+  사내망 5명이 쓰는 지금 구성은 http 로 충분합니다. 앞단 웹서버 없이
+  이 서버 하나가 화면까지 내보냅니다. 아래는 https 가 꼭 필요할 때만
+  보세요.
 
-      location / {
-          proxy_pass http://127.0.0.1:8000;
-          proxy_set_header Host $host;
-          proxy_set_header X-Forwarded-Proto $scheme;
-      }
+  사내 IP(도메인 없음)에서는 https 가 생각보다 번거롭습니다. 공인
+  도메인이 없어 인증서 자동 발급이 안 되므로, 둘 중 하나가 필요합니다.
 
-  이 경우 .env 에서 COOKIE_SECURE=true 로 바꿔 주세요.
+    · 사내 인증기관(CA)에서 이 서버 IP 용 인증서를 발급받기
+    · 자체 서명 인증서를 만들고 쓰는 PC 마다 신뢰하도록 배포하기
 
+  인증서를 준비했다면, 앞단에 Caddy 나 Nginx 같은 웹서버를 두고
+  이 앱(로컬 포트)으로 넘기면 됩니다. 그때는 .env 에서
+  COOKIE_SECURE=true 로 바꿉니다.
 
 ┌──────────────────────────────────────────────────────────────┐
 │ 문제가 생기면                                                 │
