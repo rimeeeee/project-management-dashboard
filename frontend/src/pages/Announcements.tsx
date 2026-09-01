@@ -14,6 +14,7 @@ import type { AppSettings } from "../lib/types";
 import "../styles/pager.css";
 
 const SIZE_KEY = "bizDash.v3.annPageSize";
+const VIEW_KEY = "bizDash.v3.annView";      // card | list
 
 const TABS: { key: string; label: string }[] = [
   { key: "all", label: "전체" },
@@ -48,7 +49,9 @@ export default function Announcements({
 
   const [tab, setTab] = useState("all");
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("due");
+  // 기본은 공고일 최신순입니다. 화면을 열었을 때 새로 올라온 공고부터 보이는 편이
+  // 실제로 쓰는 순서에 맞습니다.
+  const [sort, setSort] = useState("posted");
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(() => {
     try {
@@ -58,6 +61,20 @@ export default function Announcements({
       return 40;   // 프라이빗 모드 — 기본값으로 동작합니다
     }
   });
+  // 카드로 볼지 목록으로 볼지. 공고가 수백 건이라 훑을 때는 목록이 편하고,
+  // 하나씩 자세히 볼 때는 카드가 편해서 둘 다 둡니다. 고른 것은 기억해 둡니다.
+  const [view, setView] = useState<"card" | "list">(() => {
+    try {
+      return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "card";
+    } catch {
+      return "card";   // 프라이빗 모드 — 기본값으로 동작합니다
+    }
+  });
+  const changeView = (v: "card" | "list") => {
+    setView(v);
+    try { localStorage.setItem(VIEW_KEY, v); } catch { /* 프라이빗 모드 */ }
+  };
+
   // 조건 입력칸은 타이핑 중일 수 있어 따로 들고 있다가 [적용]에서 넘깁니다
   const [includeText, setIncludeText] = useState(f.include.join(", "));
 
@@ -145,8 +162,11 @@ export default function Announcements({
   const 마지막수집 = last
     ? `${last.startedAt.slice(5, 16).replace("T", " ").replace("-", "/")} · ${last.totalSeen}건`
     : "아직 없음";
-  const 잘림 = last?.detail?.sources?.some((s) => s.truncated);
-  const 실패 = last?.detail?.sources?.filter((s) => s.error) ?? [];
+  // 어느 서버가 끊겼는지 같은 내부 사정은 쓰는 사람에게 의미가 없어 적지 않습니다.
+  // 다만 그런 일이 있었다는 것은 점 색깔로만 남겨 둡니다.
+  const 문제있음 =
+    (last?.detail?.sources?.some((s) => s.truncated) ?? false) ||
+    (last?.detail?.sources?.some((s) => s.error) ?? false);
 
   return (
     <section className="view on">
@@ -154,12 +174,8 @@ export default function Announcements({
 
       {/* 수집이 조용히 멈춰 있는 걸 모르는 게 제일 위험합니다 */}
       <div className="collect-bar">
-        <span className={"dot" + (last ? (실패.length || 잘림 ? " stale" : "") : " none")} />
+        <span className={"dot" + (last ? (문제있음 ? " stale" : "") : " none")} />
         <span>마지막 수집 <b style={{ color: "var(--ink-2)" }}>{마지막수집}</b></span>
-        {잘림 && <span style={{ color: "var(--warn-ink)" }}>· 일부 서버가 응답을 끊었습니다</span>}
-        {실패.length > 0 && (
-          <span style={{ color: "var(--crit-ink)" }}>· {실패.map((s) => s.name).join(", ")} 실패</span>
-        )}
         <span className="spacer" />
         <button type="button" className="mini-btn" onClick={runCollector} disabled={busy}>
           {busy ? "수집 중…" : "지금 수집"}
@@ -227,11 +243,37 @@ export default function Announcements({
                value={query} onChange={(e) => setQuery(e.target.value)} />
         <select id="annSort" className="ann-sort" aria-label="공고 정렬 기준"
                 value={sort} onChange={(e) => setSort(e.target.value)}>
-          <option value="due">마감 임박순</option>
           <option value="posted">공고일 최신순</option>
+          <option value="due">마감 임박순</option>
           <option value="amount">공고금액 큰순</option>
           <option value="score">관련도순</option>
         </select>
+        <div className="view-toggle" role="group" aria-label="보기 방식">
+          <button type="button" className={"vt" + (view === "card" ? " on" : "")}
+                  onClick={() => changeView("card")}
+                  title="카드로 보기" aria-label="카드로 보기" aria-pressed={view === "card"}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+          </button>
+          <button type="button" className={"vt" + (view === "list" ? " on" : "")}
+                  onClick={() => changeView("list")}
+                  title="목록으로 보기" aria-label="목록으로 보기" aria-pressed={view === "list"}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="ann-count" id="annCount">
@@ -255,7 +297,59 @@ export default function Announcements({
 
       {err && <div className="form-err on">{err}</div>}
 
-      <div className="ann-grid" id="annGrid">
+      {view === "list" && (
+        <div className="card ann-list">
+          <div className="tbl-wrap"><table className="tbl">
+            <thead><tr>
+              <th style={{ width: 96 }}>상태</th>
+              <th style={{ width: 150 }}>발주처</th>
+              <th>공고명</th>
+              <th style={{ width: 170 }}>접수기간</th>
+              <th className="num" style={{ width: 110 }}>공고금액</th>
+              <th style={{ width: 190 }}></th>
+            </tr></thead>
+            <tbody>
+              {data?.items.length ? data.items.map((a) => (
+                <tr key={a.id}>
+                  <td>
+                    <span className={"st st-" + a.status.key}>{a.status.label}</span>
+                    <div className={"dday " + a.status.cls} style={{ marginTop: 2 }}>{a.status.ddayText}</div>
+                  </td>
+                  <td className="cellsub">{a.ministry}</td>
+                  <td>
+                    {a.url
+                      ? <a href={a.url} target="_blank" rel="noopener noreferrer">{a.title} ↗</a>
+                      : a.title}
+                    {a.source === "manual" && <span className="src-tag" style={{ marginLeft: 6 }}>직접 등록</span>}
+                    {a.program && <div className="home-sub">{a.program}</div>}
+                  </td>
+                  <td className="cellsub">
+                    {a.due
+                      ? <>{dots(a.openFrom)}<br />~ {dots(a.due)} {a.dueTime}</>
+                      : <span style={{ color: "var(--muted)" }}>미확인</span>}
+                  </td>
+                  <td className="num cellnum">{a.amount ? fmtEok(a.amount) + "원" : "-"}</td>
+                  <td>
+                    <div className="ann-acts">
+                      <button type="button" className={"star" + (a.fav ? " on" : "")}
+                              onClick={() => toggleFav(a)}>{a.fav ? "★" : "☆"}</button>
+                      <button type="button" className="mini-btn" onClick={() => onToProject(a)}>사업 등록</button>
+                      <button type="button" className="mini-btn" onClick={() => onEditAnn(a)}>수정</button>
+                      {a.source === "manual" && (
+                        <button type="button" className="mini-btn danger" onClick={() => removeAnn(a)}>삭제</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )) : (
+                !data && <tr><td colSpan={6}><div className="empty">불러오는 중입니다.</div></td></tr>
+              )}
+            </tbody>
+          </table></div>
+        </div>
+      )}
+
+      <div className="ann-grid" id="annGrid" hidden={view === "list"}>
         {data?.items.length ? data.items.map((a) => (
           <article key={a.id} className="ann">
             <div className="top">

@@ -36,7 +36,7 @@ def list_announcements(
     db: Session = Depends(get_db),
     tab: str = "all",
     q: str = "",
-    sort: str = "due",
+    sort: str = "posted",      # 기본은 공고일 최신순
     ministries: str = "",
     amount: str = "all",
     include: str = "",
