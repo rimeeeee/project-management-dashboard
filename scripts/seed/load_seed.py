@@ -25,6 +25,9 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+for _s in (sys.stdout, sys.stderr):        # Windows 콘솔(cp949)에서 한글이 깨지지 않게
+    _s.reconfigure(encoding="utf-8")
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend"))
 
@@ -62,7 +65,34 @@ def iso(v: str | None) -> date | None:
         return None
 
 
+def _guard_production() -> bool:
+    """
+    운영 데이터베이스(PostgreSQL)에서는 그냥 돌지 않게 막습니다.
+
+    개발은 SQLite, 운영은 PostgreSQL 로 나눠 씁니다. 서버에서 실수로 --reset 을
+    돌리면 실제 사업 자료가 지워집니다. 그런 일이 한 번이라도 나면 되돌리기
+    어려우므로, 운영으로 보이면 사람이 직접 문장을 입력해야 진행합니다.
+    """
+    from app.core.config import get_settings
+
+    if get_settings().is_sqlite:
+        return True
+
+    print("이 스크립트는 개발용입니다. 지금 연결된 곳은 운영용(PostgreSQL)으로 보입니다.")
+    print("예시 자료를 넣으면 실제 자료와 섞이고, --reset 은 실제 자료를 지웁니다.")
+    try:
+        answer = input("그래도 진행하려면  예시자료를 넣겠습니다  를 그대로 입력하세요: ")
+    except EOFError:      # 자동 실행 등 사람이 없는 경우
+        answer = ""
+    if answer.strip() != "예시자료를 넣겠습니다":
+        print("중단했습니다.")
+        return False
+    return True
+
+
 def load(reset: bool) -> int:
+    if not _guard_production():
+        return 1
     data = json.loads(SEED.read_text(encoding="utf-8"))
     db = SessionLocal()
     try:
