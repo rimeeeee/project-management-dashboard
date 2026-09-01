@@ -77,7 +77,8 @@ cd backend && ../.venv/bin/python -m pytest      # 저장·충돌·이력·보�
 ```bash
 scripts/set_password.py         로그인 비밀번호 변경
 scripts/ntis_backfill.py        NTIS 지난 공고 채우기 (--days 180)
-scripts/release.ps1             서버에 올릴 준비 (테스트·시안대조·화면빌드)
+scripts/release.ps1             서버에 올릴 준비 — Windows
+scripts/release.sh              서버에 올릴 준비 — mac · Linux
 scripts/make_package.sh         파일로 옮겨야 할 때만 — 압축본 만들기
 scripts/seed/load_seed.py       개발용 예시 자료 넣기 (서버에서 쓰지 마세요)
 scripts/seed/clear_examples.py  예시 자료 지우기
