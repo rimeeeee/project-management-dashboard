@@ -82,7 +82,7 @@ export default function AnnForm({ ann, ministries, onDone, onClose }: Props) {
           </div>
           <div className="f">
             <label htmlFor="anNo">공고번호</label>
-            <input id="anNo" placeholder="예: 보건복지부공고 제2026-373호"
+            <input id="anNo"
                    value={v.no} onChange={(e) => set("no", e.target.value)} />
           </div>
           <div className="f">
@@ -108,7 +108,7 @@ export default function AnnForm({ ann, ministries, onDone, onClose }: Props) {
           </div>
           <div className="f">
             <label htmlFor="anContact">문의처</label>
-            <input id="anContact" placeholder="예: 043-713-8721"
+            <input id="anContact"
                    value={v.contact} onChange={(e) => set("contact", e.target.value)} />
           </div>
           <div className="f" style={{ gridColumn: "1/-1" }}>
