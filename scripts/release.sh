@@ -18,7 +18,7 @@ cd "$(dirname "$0")/.."
 PY="$PWD/.venv/bin/python"
 [ -x "$PY" ] || PY="$PWD/.venv/Scripts/python.exe"   # Windows(Git Bash)
 if [ ! -x "$PY" ]; then
-  echo ".venv 가 없습니다. README 의 '개발 환경 준비' 를 먼저 해 주세요." >&2
+  echo ".venv 가 없습니다. docs/개발.md 의 '개발 환경 준비' 를 먼저 해 주세요." >&2
   exit 1
 fi
 

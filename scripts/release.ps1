@@ -17,7 +17,7 @@ Set-Location (Join-Path $PSScriptRoot "..")
 
 $py = Join-Path $PWD ".venv\Scripts\python.exe"
 if (-not (Test-Path $py)) {
-    Write-Host ".venv 가 없습니다. README 의 '개발 환경 준비' 를 먼저 해 주세요."
+    Write-Host ".venv 가 없습니다. docs/개발.md 의 '개발 환경 준비' 를 먼저 해 주세요."
     exit 1
 }
 

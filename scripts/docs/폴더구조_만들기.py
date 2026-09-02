@@ -7,6 +7,7 @@ docs/폴더구조.txt 를 실제 폴더를 읽어 만듭니다.
 폴더 설명을 붙이려면 아래 NOTE 에 한 줄 추가하면 됩니다.
 """
 import sys
+import unicodedata
 from pathlib import Path
 
 for _s in (sys.stdout, sys.stderr):        # Windows 콘솔(cp949)에서 한글이 깨지지 않게
@@ -59,13 +60,19 @@ NOTE = {
  "scripts/probe": "NTIS 응답 형식 조사",
  "scripts/docs": "이 문서를 만드는 스크립트",
  "docs": "문서",
+ "docs/개발.md": "고칠 때 보는 안내",
  "docs/prototype": "확정된 디자인 시안 (요구사항 원본)",
  "docs/ntis": "NTIS 응답 원문",
  "data": "자료 저장 (bizdash.db)",
  ".env.example": "설정 견본 — .env 로 복사해서 씁니다",
- "README.md": "개발자용 안내",
+ "README.md": "이 프로그램 소개",
  "requirements.txt": "설치할 파이썬 라이브러리",
 }
+
+def _w(s: str) -> int:
+    """화면에서 차지하는 칸 수. 한글·한자 등은 두 칸입니다."""
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in s)
+
 
 lines = []
 
@@ -82,7 +89,9 @@ def walk(d: Path, prefix: str = "") -> None:
         name = p.name + ("/" if p.is_dir() else "")
         row = f"{prefix}{'└── ' if last else '├── '}{name}"
         note = NOTE.get(rel, "")
-        lines.append(f"{row:<36}{note}".rstrip())
+        # 한글은 한 글자가 두 칸을 차지합니다. 글자 수로 맞추면 한글이 섞인
+        # 줄만 설명이 밀리므로, 화면에 보이는 폭으로 맞춥니다.
+        lines.append((row + " " * max(1, 36 - _w(row)) + note).rstrip())
         if p.is_dir() and rel not in FOLD:
             walk(p, prefix + ("    " if last else "│   "))
 

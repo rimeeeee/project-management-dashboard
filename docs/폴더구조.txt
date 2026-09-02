@@ -20,6 +20,7 @@
 ├── docs/                           문서
 │   ├── ntis/                       NTIS 응답 원문
 │   ├── prototype/                  확정된 디자인 시안 (요구사항 원본)
+│   ├── 개발.md                     고칠 때 보는 안내
 │   ├── 공고수집.md
 │   ├── 기술스택.txt
 │   ├── 설치방법.txt
@@ -52,5 +53,5 @@
 │   ├── release.sh                  서버에 올릴 준비 (mac·Linux)
 │   └── set_password.py             비밀번호 변경
 ├── .env.example                    설정 견본 — .env 로 복사해서 씁니다
-├── README.md                       개발자용 안내
+├── README.md                       이 프로그램 소개
 └── requirements.txt                설치할 파이썬 라이브러리
