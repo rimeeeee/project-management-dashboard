@@ -334,8 +334,17 @@ export default function Dashboard({
           {/* 이 사업의 일정 */}
           <div className="card cal-card" id="calCard-dash">
             <h2>사업 일정
-              <button type="button" className="mini-btn" id="calZoomBtn-dash"
-                      onClick={() => onZoom("dash", ym, picked)}>크게 보기</button>
+              <button type="button" className="cal-zoom" id="calZoomBtn-dash"
+                      title="크게 보기" aria-label="달력 크게 보기"
+                      onClick={() => onZoom("dash", ym, picked)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="15 3 21 3 21 9" />
+                  <polyline points="9 21 3 21 3 15" />
+                  <line x1="21" y1="3" x2="14" y2="10" />
+                  <line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+              </button>
             </h2>
             <div className="cal-head">
               <button type="button" className="cal-nav" onClick={() => moveCal(-1)} aria-label="이전 달">‹</button>

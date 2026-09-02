@@ -14,6 +14,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+for _s in (sys.stdout, sys.stderr):        # Windows 콘솔(cp949)에서 한글이 깨지지 않게
+    _s.reconfigure(encoding="utf-8")
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend"))
 

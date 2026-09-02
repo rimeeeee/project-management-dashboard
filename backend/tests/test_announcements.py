@@ -54,6 +54,15 @@ def test_마감이_가까우면_soon_으로_표시한다(client, seeded):
 
 
 # ---------------------------------------------------------------- 정렬
+def test_기본_정렬은_공고일_최신순이다(client, seeded):
+    """
+    화면을 열었을 때 새로 올라온 공고가 위에 와야 합니다.
+    sort 를 주지 않았을 때의 기본값을 확인합니다.
+    """
+    posted = [x["posted"] for x in client.get(f"{A}?size=50").json()["items"]]
+    assert posted == sorted(posted, reverse=True)
+
+
 def test_마감_임박순은_접수중_접수예정_기간미확인_마감_순이다(client, seeded):
     keys = [x["status"]["key"] for x in client.get(f"{A}?sort=due&size=50").json()["items"]]
     rank = {"open": 0, "upcoming": 1, "unknown": 2, "closed": 3}
@@ -96,7 +105,9 @@ def test_금액_구간으로_걸러내고_금액_미입력은_제외한다(clien
 
 
 def test_탭은_접수_상태와_대응한다(client, seeded):
-    assert [x["id"] for x in client.get(f"{A}?tab=open&size=50").json()["items"]] == ["a2", "a1"]
+    # 이 시험은 '어느 공고가 그 탭에 들어오는가'를 봅니다. 순서는 정렬 시험에서
+    # 따로 확인하므로, 기본 정렬이 바뀌어도 흔들리지 않게 순서를 빼고 견줍니다.
+    assert sorted(x["id"] for x in client.get(f"{A}?tab=open&size=50").json()["items"]) == ["a1", "a2"]
     assert [x["id"] for x in client.get(f"{A}?tab=upcoming&size=50").json()["items"]] == ["a3"]
     assert [x["id"] for x in client.get(f"{A}?tab=closed&size=50").json()["items"]] == ["a4"]
 

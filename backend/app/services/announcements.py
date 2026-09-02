@@ -40,7 +40,7 @@ STATUS_RANK = {"open": 0, "upcoming": 1, "unknown": 2, "closed": 3}
 class Query:
     tab: str = "all"           # all / upcoming / open / closed / fav
     q: str = ""                # 제목 내 검색
-    sort: str = "due"          # due / posted / amount / score
+    sort: str = "posted"       # posted / due / amount / score  — 기본은 공고일 최신순
     ministries: list[str] = None  # type: ignore[assignment]
     amount: str = "all"
     include: list[str] = None  # type: ignore[assignment]

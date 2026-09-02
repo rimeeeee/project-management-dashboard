@@ -69,11 +69,24 @@ export default function Home({ projects, details, onGo, onZoom }: Props) {
         </div>
       </div>
 
+      {/* 달력(1/3)과 사업별 현황(2/3)을 한 줄에 둡니다.
+          화면이 좁으면 overrides.css 가 위아래로 다시 쌓습니다. */}
+      <div className="home-split">
+
       {/* 전체 일정 달력. 사업 진행 기간은 형광펜처럼 칠해집니다. */}
-      <div className="card cal-card" id="calCard-home" style={{ marginTop: 16 }}>
+      <div className="card cal-card" id="calCard-home">
         <h2>내 사업 일정
-          <button type="button" className="mini-btn" id="calZoomBtn-home"
-                  onClick={() => onZoom("home", ym, picked)}>크게 보기</button>
+          <button type="button" className="cal-zoom" id="calZoomBtn-home"
+                  title="크게 보기" aria-label="달력 크게 보기"
+                  onClick={() => onZoom("home", ym, picked)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="15 3 21 3 21 9" />
+              <polyline points="9 21 3 21 3 15" />
+              <line x1="21" y1="3" x2="14" y2="10" />
+              <line x1="3" y1="21" x2="10" y2="14" />
+            </svg>
+          </button>
         </h2>
         <div className="cal-head">
           <button type="button" className="cal-nav" onClick={() => moveCal(-1)} aria-label="이전 달">‹</button>
@@ -91,7 +104,7 @@ export default function Home({ projects, details, onGo, onZoom }: Props) {
         />
       </div>
 
-      <div className="card" style={{ marginTop: 16 }}>
+      <div className="card home-list">
         <h2>사업별 현황 <span className="hint">사업명을 누르면 상세 대시보드로 이동합니다</span></h2>
         <div className="tbl-wrap"><table className="tbl">
           <thead><tr>
@@ -147,6 +160,8 @@ export default function Home({ projects, details, onGo, onZoom }: Props) {
           </tbody>
         </table></div>
       </div>
+
+      </div>{/* .home-split */}
     </section>
   );
 }

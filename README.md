@@ -42,6 +42,20 @@ cd backend && ../.venv/bin/python -m pytest      # 저장·충돌·이력·보�
 .venv/bin/python scripts/verify/run.py           # 디자인 시안 대조
 ```
 
+### 화면을 직접 눌러 보려면 — 예시 자료
+
+빈 화면으로는 진행률·집행·달력이 어떻게 보이는지 확인할 수 없습니다.
+예시 사업 2건(회차 10건)을 넣어 두고 개발하세요.
+
+```bash
+.venv/bin/python scripts/seed/load_seed.py           # 넣기
+.venv/bin/python scripts/seed/load_seed.py --reset   # 지우고 다시 넣기
+.venv/bin/python scripts/seed/clear_examples.py      # 예시만 지우기
+```
+
+운영 데이터베이스(PostgreSQL)에 연결된 상태로 돌리면 확인 문장을 입력해야
+진행됩니다. 실수로 실제 자료를 지우지 않기 위한 것입니다.
+
 ## 손대면 안 되는 곳
 
 - **`backend/app/core/`** — 진행률·상태 판정·회차 계산이 모두 여기 있습니다.
@@ -80,7 +94,7 @@ scripts/ntis_backfill.py        NTIS 지난 공고 채우기 (--days 180)
 scripts/release.ps1             서버에 올릴 준비 — Windows
 scripts/release.sh              서버에 올릴 준비 — mac · Linux
 scripts/make_package.sh         파일로 옮겨야 할 때만 — 압축본 만들기
-scripts/seed/load_seed.py       개발용 예시 자료 넣기 (서버에서 쓰지 마세요)
+scripts/seed/load_seed.py       개발용 예시 자료 넣기 (--reset 으로 다시)
 scripts/seed/clear_examples.py  예시 자료 지우기
 scripts/docs/폴더구조_만들기.py  docs/폴더구조.txt 다시 만들기
 ```
