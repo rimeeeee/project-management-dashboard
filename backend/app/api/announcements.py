@@ -78,7 +78,7 @@ class AnnIn(BaseModel):
     openFrom: str = ""
     due: str = ""
     dueTime: str = ""
-    amountEok: float = 0        # 화면은 억원, 저장은 원
+    amount: int = 0             # 원 단위
     contact: str = ""
     url: str = ""
 
@@ -104,7 +104,7 @@ def _clean(body: AnnIn) -> dict[str, Any]:
         "open_from": open_from,
         "due": due,
         "due_time": body.dueTime.strip(),
-        "amount": max(0, round(body.amountEok * 1e8)),
+        "amount": max(0, int(body.amount)),
         "contact": body.contact.strip(),
         "url": body.url.strip(),
     }

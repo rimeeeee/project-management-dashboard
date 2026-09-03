@@ -13,7 +13,28 @@ import { clamp, daysBetween, isoOf, todayISO } from "../lib/format";
 /* 사업 띠 색 — 사업 순서대로 돌아가며 씁니다.
    범례에 이미 쓰는 청록(시작)·빨강(종료)·보라(할 일)는 넣지 않습니다.
    사업이 6개를 넘으면 색이 다시 돌아옵니다. */
-export const RUN_COLORS = ["#e0a112", "#e0629b", "#3f9142", "#b5651d", "#4a7fe0", "#00897b"];
+/* 사업 구분 색.
+
+   색상(파랑·주황·초록·보라…)이 서로 멀어 한눈에 구분됩니다. 명도만 다른
+   같은 계열 색은 나란히 놓으면 헷갈려서 쓰지 않았습니다.
+
+   Okabe-Ito 팔레트를 바탕으로 골랐습니다. 적록색맹(남성 20명 중 1명꼴)
+   에게도 서로 다르게 보이도록 만들어진 조합입니다. 흰 바탕에서 옅어
+   묻히는 노랑 계열은 뺐습니다.
+
+   앞쪽 다섯 색이 서로 가장 멀어서, 사업을 다섯 개까지 볼 때 가장 잘
+   구분됩니다. 여덟 개를 넘기면 색이 다시 처음부터 쓰이므로, 그때는
+   색만으로 구분하지 말고 이름을 함께 봐야 합니다. */
+export const RUN_COLORS = [
+  "#0072B2",   // 파랑
+  "#D55E00",   // 주홍
+  "#009E73",   // 초록
+  "#CC79A7",   // 자주
+  "#E69F00",   // 주황
+  "#56B4E9",   // 하늘
+  "#7B5AA6",   // 보라
+  "#8C6D3F",   // 갈색
+];
 export const runColor = (i: number) => RUN_COLORS[i % RUN_COLORS.length];
 
 export interface CalEvent {
@@ -21,6 +42,10 @@ export interface CalEvent {
   kind: "start" | "end" | "todo";
   label: string;
   pid?: string;
+  /* 그 일정이 어느 사업 것인지 색으로 알려 줍니다.
+     사업 기간 띠와 같은 색을 써서, 여러 사업이 섞인 전체 화면에서
+     '이 할 일이 어느 사업 것인지' 를 색만 보고 알 수 있게 합니다. */
+  color?: string;
 }
 
 export interface CalRun {
@@ -39,11 +64,16 @@ interface Props {
   showRunLegend: boolean;         // 사업이 여럿인 전체 화면에서만 띠 범례를 답니다
   onPick: (iso: string) => void;
   onGo?: (pid: string) => void;   // 일정 목록에서 사업 이름을 누르면 이동
+  /* 빈 날짜도 고를 수 있게 할지.
+     원래는 '그 날 일정을 보려고' 누르는 것이라 일정이 있는 날만 눌렸습니다.
+     사업 대시보드에서는 고른 날짜가 할 일 기한이 되므로, 아무것도 없는
+     날짜야말로 눌러야 합니다. 그 화면에서만 켭니다. */
+  pickAnyDay?: boolean;
   idSuffix: string;               // home / dash / full
 }
 
 export default function Calendar({
-  ym, picked, big, events, runs, showRunLegend, onPick, onGo, idSuffix,
+  ym, picked, big, events, runs, showRunLegend, onPick, onGo, idSuffix, pickAnyDay = false,
 }: Props) {
   const 연 = ym.getFullYear();
   const 월 = ym.getMonth();
@@ -89,7 +119,7 @@ export default function Calendar({
         iso === picked ? "sel" : "",
       ].filter(Boolean).join(" ");
 
-      const 누를수있음 = 목록.length > 0;
+      const 누를수있음 = pickAnyDay || 목록.length > 0;
       칸.push(
         <div
           key={iso}
@@ -111,7 +141,11 @@ export default function Calendar({
         >
           {d.getDate()}
           <span className="cal-dots">
-            {종류.map((k) => <i key={k} className={"dot-" + k} />)}
+            {종류.map((k) => {
+              // 할 일 점은 그 사업의 띠 색을 그대로 씁니다(같은 날 여러 사업이면 첫 번째).
+              const 색 = k === "todo" ? 목록.find((e) => e.kind === "todo")?.color : undefined;
+              return <i key={k} className={"dot-" + k} style={색 ? { background: 색 } : undefined} />;
+            })}
           </span>
           {목록.length > 0 && (
             <span className="cal-lbl">
@@ -200,7 +234,12 @@ export default function Calendar({
         <div className="row">
           <span><i className="k-start" />사업 시작</span>
           <span><i className="k-end" />사업 종료</span>
-          <span><i className="k-todo" />할 일 기한</span>
+          {/* 할 일 점은 그 사업의 색을 씁니다. 사업이 하나뿐인 대시보드에서는
+              그 색을 보여 주면 뜻이 통하지만, 여러 사업을 함께 보는 화면에서는
+              색이 제각각이라 범례에 넣을 대표 색이 없습니다. 그때는 뺍니다. */}
+          {runs.length === 1 && (
+            <span><i className="k-todo" style={{ background: runs[0].color }} />할 일 기한</span>
+          )}
         </div>
         {/* 사업 대시보드에서는 사업이 하나뿐이고 이름이 화면 제목에 이미 있으므로
             사업 범례 줄을 넣지 않습니다. */}
@@ -221,7 +260,8 @@ export default function Calendar({
           <>
             {보일것.map((e, i) => (
               <div key={i} className="cal-ev">
-                <i className={"dot-" + e.kind} />
+                <i className={"dot-" + e.kind}
+                   style={e.kind === "todo" && e.color ? { background: e.color } : undefined} />
                 <span className="d">{e.date.slice(5).replaceAll("-", ".")}</span>
                 <span className="nm">
                   {e.pid && onGo ? (
@@ -233,7 +273,7 @@ export default function Calendar({
               </div>
             ))}
             {더 > 0 && (
-              <div className="cal-more">외 {더}건 — '크게 보기'에서 모두 볼 수 있습니다</div>
+              <div className="cal-more">외 {더}건</div>
             )}
           </>
         ) : (
@@ -264,9 +304,11 @@ export function calData(
       const idx = allProjects.findIndex((x) => x.id === p.id);
       runs.push({ from: p.start, to: p.end, name: p.name, color: runColor(idx >= 0 ? idx : i) });
     }
+    const 사업색 = runColor(allProjects.findIndex((x) => x.id === p.id) >= 0
+      ? allProjects.findIndex((x) => x.id === p.id) : i);
     (p.todos || []).forEach((t) => {
       if (t.due && !t.done) {
-        events.push({ date: t.due, kind: "todo", label: `할 일 · ${t.text}`, pid: p.id });
+        events.push({ date: t.due, kind: "todo", label: `할 일 · ${t.text}`, pid: p.id, color: 사업색 });
       }
     });
   });

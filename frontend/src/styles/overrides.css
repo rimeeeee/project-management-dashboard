@@ -142,3 +142,99 @@
 @media(max-width:1180px){
   .dash-wrap.open .panel{max-height:none; overflow-y:visible}
 }
+
+/* ── 예산 집행 카드를 조금 넓게 ────────────────────────────────────
+   금액을 억이 아니라 원 단위로 적으면서 자릿수가 세 배로 길어졌습니다.
+   1:1 로 나눈 칸에서는 '잔액 950,000,000원' 의 단위가 다음 줄로 내려갔습니다.
+   오른쪽 칸을 조금 넓힙니다. 같은 열에 있는 달력도 함께 넓어지는데,
+   달력은 넓을수록 읽기 좋아 손해가 없습니다. */
+.dash-grid{grid-template-columns:1fr 1.25fr}
+@media(max-width:860px){.dash-grid{grid-template-columns:1fr}}
+
+/* 금액을 억이 아니라 원 단위로 적으면서 자릿수가 세 배가 됐습니다.
+   '2.82억' 을 전제로 잡힌 크기들이라 그대로 두면 줄바꿈이 납니다.
+   게이지 막대는 카드 폭을 채우는 것이라 폭을 줄여도 도움이 되지 않습니다.
+   실제로 넘치는 것은 큰 숫자와 세 칸짜리 요약 줄입니다. */
+
+/* 집행액 큰 숫자 — 31.5px 에서는 '282,000,000원' 이 한 줄을 넘깁니다 */
+.money-line .big{font-size:25px}
+.money-line .of{white-space:nowrap}
+
+/* 막대 아래 오른쪽 끝의 총액 */
+.meter .lbls{white-space:nowrap}
+
+/* 기간 경과 · 집행률 · 잔액 — flex 라 잔액 칸이 내용만큼만 차지해 좁았습니다.
+   세 칸을 고르게 나누고, 잔액 숫자만 한 단계 줄입니다.
+   다른 두 칸(%)은 짧아서 원래 크기를 지킵니다. */
+.minirow{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+.minirow .stat{min-width:0}
+.minirow .stat .v{white-space:nowrap}
+#bdLeft{font-size:16px}
+
+/* 비목별 줄 — 비목명 | 막대 | 잔액 이 한 줄에 있습니다.
+   잔액 칸이 92px 로 잡혀 있어 '950,000,000원' 이 들어가지 못하고 줄바꿈됐습니다.
+   막대(가운데 1fr)가 남는 폭을 다 가져가던 자리라, 막대를 줄이고 그만큼을
+   잔액에 넘깁니다. 막대는 비율만 보이면 되는 것이라 좁아져도 읽는 데
+   지장이 없습니다. */
+.cat-row{grid-template-columns:104px minmax(60px,1fr) 148px}
+.cat-row .v{white-space:nowrap}
+
+/* 사업별 현황 표의 진행률 막대 — 대시보드 비목별 막대와 같은 방식으로
+   마우스를 올리면 집행액과 예산을 위에 띄웁니다.
+   .minibar 자체에는 overflow:hidden 이 걸려 있어(막대 모서리를 둥글게 자르려고)
+   그 안에 말풍선을 두면 잘려서 보이지 않습니다. 바깥에 감싸는 칸을 둡니다. */
+.bar-hover{position:relative; cursor:pointer}
+.bar-hover .tip{
+  position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+  background:var(--ink); color:var(--surface); font-size:13.2px; font-weight:600;
+  border-radius:7px; padding:5px 10px; white-space:nowrap; pointer-events:none;
+  opacity:0; transition:opacity .12s; z-index:5; font-variant-numeric:tabular-nums;
+}
+.bar-hover:hover .tip{opacity:1}
+
+/* ── 할 일을 달력 카드 안으로 ─────────────────────────────────────
+   할 일과 달력이 따로 있어서, 기한이 있는 일을 적을 때 달력에서 날짜를
+   확인하고 입력칸으로 눈을 옮겨 다시 골라야 했습니다. 한 카드에 붙이고,
+   달력에서 날짜를 누르면 기한이 채워지게 했습니다. */
+.cal-todo{margin-top:14px; padding-top:14px; border-top:1px solid var(--line)}
+.cal-todo h3{font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px}
+.cal-todo h3 .hint{font-size:13.2px; font-weight:400; color:var(--muted)}
+.cal-todo .todo-add{margin-top:10px}
+/* 할 일이 쌓여도 달력 카드가 한없이 길어지지 않게 이 안에서만 굴립니다. */
+.cal-todo #todoList{max-height:240px; overflow-y:auto; overscroll-behavior:contain}
+
+/* 대시보드 달력은 빈 날짜도 고를 수 있습니다(고른 날이 할 일 기한이 됩니다).
+   손 모양 커서와 hover 표시가 .cal-d.has(일정 있는 날)에만 걸려 있어,
+   빈 날짜는 눌리는데도 눌리지 않는 것처럼 보였습니다. */
+#calCard-dash .cal-d[role="button"]{cursor:pointer}
+#calCard-dash .cal-d[role="button"]:hover{border-color:var(--line-strong)}
+
+/* 할 일 추가 — 입력칸을 따로 두지 않고 목록 맨 아래 줄에서 바로 적습니다.
+   기존 할 일 줄과 같은 모양이라 '여기에 이어서 적으면 되는구나' 가 바로 보입니다. */
+.todo-new{align-items:center; gap:8px}
+.todo-new .plus{color:var(--muted); font-size:16px; width:16px; text-align:center}
+.todo-new-input{
+  flex:1; border:0; background:transparent; padding:4px 0;
+  font-size:15px; color:var(--ink); outline:none;
+}
+.todo-new-input::placeholder{color:var(--muted)}
+.todo-new:focus-within{background:var(--surface-2); border-radius:8px}
+
+
+/* ── 종료된 사업 접기 ─────────────────────────────────────────────
+   종료일이 지난 사업은 접어 둡니다. 지운 것이 아니라 눌러서 펼쳐 볼 수
+   있고, 들어가면 자료도 그대로 있습니다.
+   전체 현황의 합계(총 사업비·총 집행액)는 진행 중인 사업만 셉니다.
+   끝난 사업까지 더하면 '여태 한 사업 전부' 가 되어 지금 규모를 알 수
+   없습니다. 달력의 사업 기간 띠는 종료된 것도 그대로 둡니다. */
+.nav-fold{
+  display:flex; align-items:center; gap:6px; width:100%;
+  padding:7px 10px; border:0; background:transparent;
+  color:var(--muted); font-size:14px; cursor:pointer; text-align:left;
+}
+.nav-fold:hover{color:var(--ink-2)}
+.nav-fold .caret{font-size:11px; width:10px}
+.nav-none{padding:7px 10px; color:var(--muted); font-size:13.8px}
+/* 접어 둔 사업은 눈에 덜 걸리게 */
+.nav-closed .nav-btn .nm{color:var(--muted)}
+.fold-row td{border-bottom:none; padding-top:4px; padding-bottom:4px}

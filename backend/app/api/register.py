@@ -45,6 +45,9 @@ class KpiIn(BaseModel):
 
 class TaskIn(BaseModel):
     name: str = ""
+    # 0 기획 · 1 착수 · 2 진행 · 3 마무리 · 4 완료.
+    # 옛 화면은 보내지 않으므로 기본값을 둡니다.
+    stage: int = 2
 
 
 class CategoryIn(BaseModel):
@@ -58,8 +61,7 @@ class ProjectIn(BaseModel):
     folderUrl: str = ""
     start: str = ""
     end: str = ""
-    # 화면에서는 억원으로 받고, 여기서 원으로 바꿔 저장합니다.
-    budgetEok: float = 0
+    budget: int = 0            # 원 단위
     cycle: str = WEEKLY
     kpis: list[KpiIn] = Field(default_factory=list)
     tasks: list[TaskIn] = Field(default_factory=list)
@@ -75,7 +77,7 @@ class Cleaned(BaseModel):
     budget: int
     cycle: str
     kpis: list[KpiIn]
-    tasks: list[str]
+    tasks: list[TaskIn]
     categories: list[CategoryIn]
 
 
@@ -97,9 +99,9 @@ def clean(body: ProjectIn) -> Cleaned:
     if not (start < end):
         raise bad("사업 기간을 확인하세요 (시작일 < 종료일).")
 
-    if body.budgetEok <= 0:
-        raise bad("총 사업비는 0보다 큰 숫자(억원)로 입력하세요.")
-    budget = round(body.budgetEok * 1e8)      # 억 → 원
+    if body.budget <= 0:
+        raise bad("총 사업비는 0보다 큰 숫자(원)로 입력하세요.")
+    budget = int(body.budget)
 
     if body.cycle not in CYCLES:
         raise bad("보고 주기가 올바르지 않습니다.")
@@ -114,7 +116,10 @@ def clean(body: ProjectIn) -> Cleaned:
         seen_kpi.add(nm)
         kpis.append(KpiIn(name=nm, target=k.target, unit=k.unit.strip() or "건"))
 
-    tasks = [t.name.strip() for t in body.tasks if t.name.strip()]
+    tasks = [
+        TaskIn(name=t.name.strip(), stage=min(4, max(0, t.stage)))
+        for t in body.tasks if t.name.strip()
+    ]
 
     cats: list[CategoryIn] = []
     seen_cat: set[str] = set()
@@ -163,8 +168,9 @@ def _set_lists(db: Session, p: Project, c: Cleaned, done_by_name: dict[str, bool
     )
     # 같은 이름의 과제는 완료 체크 상태를 유지합니다
     p.tasks.extend(
-        ProjectTask(name=nm, done=done_by_name.get(nm, False), sort_order=i)
-        for i, nm in enumerate(c.tasks)
+        ProjectTask(name=t.name, done=done_by_name.get(t.name, False),
+                    sort_order=i, stage=t.stage)
+        for i, t in enumerate(c.tasks)
     )
     p.categories.extend(
         ProjectCategory(name=x.name, budget_amount=x.allocated, sort_order=i)

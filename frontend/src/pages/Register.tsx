@@ -4,8 +4,7 @@
    확인 순서와 문구는 프로토타입 그대로입니다(사업명 → 기간 → 총사업비 →
    비목 → 추진과제 → 성과지표). 서버에서도 같은 순서로 다시 확인합니다.
 
-   총 사업비는 화면에서 '억원'으로 받고 서버에서 '원'으로 바꿔 저장합니다.
-   비목 배정액은 원 단위 그대로 받습니다. */
+   금액은 총 사업비도 비목 배정액도 모두 원 단위로 받습니다. */
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { ProjectDetail } from "../lib/types";
@@ -27,7 +26,7 @@ interface CatRow { name: string; amt: string }
 export interface Prefill {
   name: string;
   agency: string;
-  budget: string;      // 억원, 화면에 보이는 그대로
+  budget: string;      // 원, 화면에 보이는 그대로
 }
 
 interface Props {
@@ -51,7 +50,9 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
   const [budget, setBudget] = useState("");
   const [cycle, setCycle] = useState("주간");
   const [kpis, setKpis] = useState<KpiRow[]>([]);
-  const [tasks, setTasks] = useState<string[]>([]);
+  /* 과제는 이름과 단계를 함께 들고 있습니다. 과제를 새로 더하면 바로 위
+     과제와 같은 단계로 시작해서, 단계가 바뀌는 곳만 고르면 됩니다. */
+  const [tasks, setTasks] = useState<{ name: string; stage: number }[]>([]);
   const [cats, setCats] = useState<CatRow[]>([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,12 +64,14 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
       setFolder(editing.folderUrl);
       setStart(editing.start);
       setEnd(editing.end);
-      setBudget((editing.budget / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 4 }));
+      setBudget(editing.budget ? editing.budget.toLocaleString("ko-KR") : "");
       setCycle(editing.cycle);
       setKpis(editing.kpis.length
         ? editing.kpis.map((k) => ({ name: k.name, target: String(k.target), unit: k.unit }))
         : [{ name: "", target: "", unit: "" }]);
-      setTasks(editing.tasks.length ? editing.tasks.map((t) => t.name) : [""]);
+      setTasks(editing.tasks.length
+        ? editing.tasks.map((t) => ({ name: t.name, stage: t.stage }))
+        : [{ name: "", stage: 1 }]);
       setCats(editing.categories.length
         ? editing.categories.map((c) => ({ name: c.name, amt: c.allocated ? commas(String(c.allocated)) : "" }))
         : [{ name: "", amt: "" }]);
@@ -80,7 +83,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
       setFolder(""); setStart(""); setEnd("");
       setCycle("주간");
       setKpis(Array.from({ length: 4 }, () => ({ name: "", target: "", unit: "" })));
-      setTasks(Array.from({ length: 4 }, () => ""));
+      setTasks(Array.from({ length: 4 }, () => ({ name: "", stage: 1 })));
       setCats(DEFAULT_CATEGORIES.map((c) => ({ name: c, amt: "" })));
     }
     setErr("");
@@ -98,12 +101,12 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
     setErr("");
     const payload = {
       name, agency, folderUrl: folder, start, end,
-      budgetEok: Number(budget.replace(/,/g, "")) || 0,
+      budget: Number(budget.replace(/,/g, "")) || 0,
       cycle,
       kpis: kpis.map((k) => ({
         name: k.name, target: Number(k.target.replace(/,/g, "")) || 0, unit: k.unit,
       })),
-      tasks: tasks.map((t) => ({ name: t })),
+      tasks: tasks.map((t) => ({ name: t.name, stage: t.stage })),
       categories: cats.map((c) => ({ name: c.name, amt: c.amt })).map((c) => ({
         name: c.name, allocated: Number(onlyDigits(c.amt)) || 0,
       })),
@@ -172,8 +175,8 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
               <input id="rgEnd" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
             <div className="f">
-              <label htmlFor="rgBudget">총 사업비 (억원) *</label>
-              <input id="rgBudget" type="text" inputMode="decimal" placeholder="예: 9.5"
+              <label htmlFor="rgBudget">총 사업비 (원) *</label>
+              <input id="rgBudget" type="text" inputMode="numeric" placeholder="예: 950000000"
                      value={budget} onChange={(e) => setBudget(e.target.value)} />
             </div>
             <div className="f">
@@ -217,15 +220,19 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
           <div id="rgTaskRows">
             {tasks.map((t, i) => (
               <div key={i} className="dyn-row task">
-                <input placeholder="추진과제" className="t-nm" value={t}
-                       onChange={(e) => setTasks(tasks.map((x, j) => j === i ? e.target.value : x))} />
+                <input placeholder="추진과제" className="t-nm" value={t.name}
+                       onChange={(e) => setTasks(tasks.map((x, j) =>
+                         j === i ? { ...x, name: e.target.value } : x))} />
                 <button type="button" className="rm" aria-label="과제 삭제"
                         onClick={() => setTasks(tasks.filter((_, j) => j !== i))}>×</button>
               </div>
             ))}
           </div>
+          <p className="hint" style={{ marginTop: 6 }}>과제는 진행 순서대로 적습니다.</p>
           <button type="button" className="btn-add"
-                  onClick={() => setTasks([...tasks, ""])}>+ 추진과제 추가</button>
+                  onClick={() => setTasks([...tasks,
+                    { name: "", stage: tasks.length ? tasks[tasks.length - 1].stage : 1 }])}>
+            + 추진과제 추가</button>
         </div>
 
         <div className="card">

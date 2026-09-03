@@ -195,9 +195,7 @@ export default function Shell() {
               setPrefill({
                 name: a.title,
                 agency: [a.ministry, a.agency].filter(Boolean).join(" · "),
-                budget: a.amount
-                  ? (a.amount / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 2 })
-                  : "",
+                budget: a.amount ? a.amount.toLocaleString("ko-KR") : "",
               });
               go("register");
               openModal("공고 정보를 옮겼습니다", "사업 기간과 추진과제를 채워 등록하세요.");

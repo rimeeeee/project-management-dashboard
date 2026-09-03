@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Pager from "../components/Pager";
 import { annApi, type Ann, type AnnPage, type CollectorStatus } from "../lib/annApi";
-import { fmtEok } from "../lib/format";
+import { fmtMoney } from "../lib/format";
 import type { AppSettings } from "../lib/types";
 import "../styles/pager.css";
 
@@ -328,7 +328,7 @@ export default function Announcements({
                       ? <>{dots(a.openFrom)}<br />~ {dots(a.due)} {a.dueTime}</>
                       : <span style={{ color: "var(--muted)" }}>미확인</span>}
                   </td>
-                  <td className="num cellnum">{a.amount ? fmtEok(a.amount) + "원" : "-"}</td>
+                  <td className="num cellnum">{a.amount ? fmtMoney(a.amount) : "-"}</td>
                   <td>
                     <div className="ann-acts">
                       <button type="button" className={"star" + (a.fav ? " on" : "")}
@@ -367,9 +367,9 @@ export default function Announcements({
               <div><span className="k">접수기간</span><span className="v">
                 {a.due
                   ? `${dots(a.openFrom)} ~ ${dots(a.due)} ${a.dueTime}`
-                  : <span style={{ color: "var(--muted)", fontWeight: 400 }}>미확인 · 원문에서 확인</span>}
+                  : <span style={{ color: "var(--muted)", fontWeight: 400 }}>접수기관에서 확인</span>}
               </span></div>
-              <div><span className="k">공고금액</span><span className="v">{a.amount ? fmtEok(a.amount) + "원" : "-"}</span></div>
+              <div><span className="k">공고금액</span><span className="v">{a.amount ? fmtMoney(a.amount) : "-"}</span></div>
               <div><span className="k">전문기관</span><span className="v" title={a.agency}>{a.agency || "-"}</span></div>
               <div><span className="k">사업명</span><span className="v" title={a.program}>{a.program || "-"}</span></div>
             </div>

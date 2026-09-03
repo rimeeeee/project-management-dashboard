@@ -164,7 +164,7 @@ export interface ProjectInput {
   folderUrl: string;
   start: string;
   end: string;
-  budgetEok: number;      // 화면은 억원, 서버가 원으로 바꿔 저장합니다
+  budget: number;         // 원 단위
   cycle: string;
   kpis: { name: string; target: number; unit: string }[];
   tasks: { name: string }[];

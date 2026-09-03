@@ -121,6 +121,10 @@ class ProjectTask(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     done: Mapped[bool] = mapped_column(Boolean, default=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    # 이 과제가 어느 단계 것인지 (0 기획 · 1 착수 · 2 진행 · 3 마무리 · 4 완료).
+    # 단계별로 몇 건이 끝났는지 보여 주려고 둡니다. 전체 진행률 계산에는
+    # 쓰이지 않습니다 — 그것은 예나 지금이나 완료 과제 ÷ 전체 과제입니다.
+    stage: Mapped[int] = mapped_column(Integer, default=2)
 
     project: Mapped[Project] = relationship(back_populates="tasks")
 

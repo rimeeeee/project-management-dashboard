@@ -12,7 +12,7 @@ P = "/api/projects"
 def payload(**kw):
     base = {
         "name": "새 사업", "agency": "보건복지부", "folderUrl": "",
-        "start": "2026-06-01", "end": "2027-05-31", "budgetEok": 9.5, "cycle": "주간",
+        "start": "2026-06-01", "end": "2027-05-31", "budget": 950_000_000, "cycle": "주간",
         "kpis": [{"name": "논문", "target": 3, "unit": "건"}],
         "tasks": [{"name": "착수보고"}],
         "categories": [{"name": "인건비", "allocated": 400000000}],
@@ -35,9 +35,41 @@ def test_사업을_등록한다(client):
     assert len(d["stageNotes"]) == 5
 
 
-def test_억을_원으로_바꿔_저장한다(client):
-    assert client.post(P, json=payload(budgetEok=0.75)).json()["budget"] == 75_000_000
-    assert client.post(P, json=payload(budgetEok=12)).json()["budget"] == 1_200_000_000
+def test_과제의_단계를_저장하고_단계별로_집계한다(client):
+    """
+    단계는 '어느 구간에서 막혔는지' 를 보려는 것입니다.
+    전체 진행률(완료 과제 ÷ 전체 과제)은 이것과 상관없이 그대로입니다.
+    """
+    pid = client.post(P, json=payload(tasks=[
+        {"name": "착수보고", "stage": 1},
+        {"name": "요구사항 정의", "stage": 1},
+        {"name": "구축", "stage": 2},
+        {"name": "결과보고", "stage": 4},
+    ])).json()["id"]
+
+    d = client.get(f"{P}/{pid}").json()
+    assert [t["stage"] for t in d["tasks"]] == [1, 1, 2, 4]
+
+    행 = {r["name"]: r for r in d["stageRows"]}
+    assert (행["착수"]["done"], 행["착수"]["total"]) == (0, 2)
+    assert (행["진행"]["done"], 행["진행"]["total"]) == (0, 1)
+    assert 행["기획"]["total"] == 0          # 과제 없는 단계도 자리는 있습니다
+
+
+def test_지금_단계는_끝나지_않은_과제가_처음_나오는_단계다(client):
+    """사람이 골라 두면 바꾸는 것을 잊어 어긋나므로 계산해서 씁니다."""
+    pid = client.post(P, json=payload(tasks=[
+        {"name": "A", "stage": 1},
+        {"name": "B", "stage": 2},
+    ])).json()["id"]
+
+    현재 = [r["name"] for r in client.get(f"{P}/{pid}").json()["stageRows"] if r["current"]]
+    assert 현재 == ["착수"]        # 아무것도 완료하지 않았으므로 첫 단계
+
+
+def test_총사업비를_원_단위로_저장한다(client):
+    assert client.post(P, json=payload(budget=75_000_000)).json()["budget"] == 75_000_000
+    assert client.post(P, json=payload(budget=1_200_000_000)).json()["budget"] == 1_200_000_000
 
 
 # ---------------------------------------------------------------- 확인 규칙
@@ -54,7 +86,7 @@ def test_종료일이_시작일보다_빠르면_막는다(client):
 
 
 def test_총사업비가_0이면_막는다(client):
-    r = client.post(P, json=payload(budgetEok=0))
+    r = client.post(P, json=payload(budget=0))
     assert r.status_code == 400
     assert "총 사업비는 0보다 큰" in r.json()["detail"]
 
@@ -85,7 +117,7 @@ def test_배정액을_비우면_0으로_둔다(client):
 # ---------------------------------------------------------------- 수정
 def test_사업을_수정한다(client):
     pid = client.post(P, json=payload()).json()["id"]
-    r = client.put(f"{P}/{pid}", json=payload(name="이름 바꾼 사업", budgetEok=20))
+    r = client.put(f"{P}/{pid}", json=payload(name="이름 바꾼 사업", budget=2_000_000_000))
     assert r.status_code == 200
     assert r.json()["name"] == "이름 바꾼 사업"
     assert r.json()["budget"] == 2_000_000_000

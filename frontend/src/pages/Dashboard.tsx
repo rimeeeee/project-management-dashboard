@@ -1,10 +1,10 @@
 /* 사업 대시보드 — 프로토타입 renderDash() / renderHistory() / renderTodos() 를 옮겼습니다.
    4단계에서 입력 패널을 붙일 자리는 비워 두었습니다 (지금은 조회 전용). */
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import Calendar, { calData } from "../components/Calendar";
 import InputPanel from "../components/InputPanel";
 import { api } from "../lib/api";
-import { clamp, daysBetween, dots, fmtEok, fmtWon, todayISO } from "../lib/format";
+import { clamp, daysBetween, dots, fmtMoney, fmtWon, todayISO } from "../lib/format";
 import type { ProjectDetail, ProjectSummary } from "../lib/types";
 
 interface Props {
@@ -32,7 +32,6 @@ export default function Dashboard({
   const [inputOpen, setInputOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [todoText, setTodoText] = useState("");
-  const [todoDue, setTodoDue] = useState("");
 
   async function run(fn: () => Promise<ProjectDetail>, msg?: string) {
     try {
@@ -62,12 +61,14 @@ export default function Dashboard({
       }, "삭제되었습니다"), true);
   }
 
-  function addTodo(ev: FormEvent) {
-    ev.preventDefault();
+  /* 목록 맨 아래 줄에서 바로 부릅니다(폼이 없습니다).
+     기한은 달력에서 고른 날짜를 씁니다. 적고 나면 글자만 비우고 고른 날짜는
+     그대로 두어, 같은 날 할 일을 여러 건 이어서 적을 수 있게 합니다. */
+  function addTodo() {
     if (!todoText.trim()) return;
     void run(async () => {
-      const r = await api.addTodo(p.id, todoText, todoDue);
-      setTodoText(""); setTodoDue("");
+      const r = await api.addTodo(p.id, todoText, picked);
+      setTodoText("");
       return r;
     });
   }
@@ -128,7 +129,7 @@ export default function Dashboard({
           <div className="meta" id="phMeta">
             <span>{p.agency || "발주처 미입력"}</span>
             <span>{dots(p.start)} ~ {dots(p.end)} <b style={{ color: "var(--ink-2)" }}>{p.dday.txt}</b></span>
-            <span>총 사업비 {fmtEok(p.budget)}</span>
+            <span>총 사업비 {fmtMoney(p.budget)}</span>
             <span>{p.cycle} 보고</span>
           </div>
         </div>
@@ -164,42 +165,106 @@ export default function Dashboard({
             </div>
           </div>
 
-          <div className="card">
-            <h2>진행 단계</h2>
-            <div className="stages" id="stageGauge">
-              {p.stages.map((nm, i) => (
-                <div key={nm} className={"stage " + (i < p.stage ? "done" : i === p.stage ? "now" : "")}>
-                  <div className="seg" /><div className="nm">{nm}</div>
-                </div>
-              ))}
+          {/* 이 사업의 일정 */}
+          <div className="card cal-card" id="calCard-dash">
+            <h2>사업 일정
+              <button type="button" className="cal-zoom" id="calZoomBtn-dash"
+                      title="크게 보기" aria-label="달력 크게 보기"
+                      onClick={() => onZoom("dash", ym, picked)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="15 3 21 3 21 9" />
+                  <polyline points="9 21 3 21 3 15" />
+                  <line x1="21" y1="3" x2="14" y2="10" />
+                  <line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+              </button>
+            </h2>
+            <div className="cal-head">
+              <button type="button" className="cal-nav" onClick={() => moveCal(-1)} aria-label="이전 달">‹</button>
+              <div className="cal-title" id="calTitle-dash">{ym.getFullYear()}년 {ym.getMonth() + 1}월</div>
+              <button type="button" className="cal-nav" onClick={() => moveCal(1)} aria-label="다음 달">›</button>
+              <button type="button" className="mini-btn cal-today" onClick={() => moveCal(0)}>오늘</button>
             </div>
-            <div className="stagelist" id="stageList">
-              {p.stages.map((nm, i) => {
-                const note = (p.stageNotes[i] || "").trim();
-                return (
-                  <div key={nm} className={"stagerow " + (i < p.stage ? "done" : i === p.stage ? "now" : "")}>
-                    <span className="nm">{nm}</span>
-                    <span className={"tx " + (note ? "" : "empty")}>{note || "—"}</span>
-                  </div>
-                );
-              })}
+            <div className="cal-dow" aria-hidden="true">
+              <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+            </div>
+            <Calendar
+              ym={ym} picked={picked} big={false} events={events} runs={runs}
+              showRunLegend={false}
+              onPick={(iso) => {
+                const 다음 = picked === iso ? "" : iso;
+                // 고른 날짜가 곧 새 할 일의 기한입니다(아래 입력줄에서 씁니다).
+                setPicked(다음);
+              }}
+              onGo={onGo} idSuffix="dash" pickAnyDay
+            />
+            {/* 할 일 — 달력과 한 카드에 둡니다.
+                입력칸을 따로 두지 않고 목록 맨 아래 줄에서 바로 적습니다.
+                기한은 달력에서 고른 날짜를 씁니다(안 고르면 기한 없음). */}
+            <div className="cal-todo">
+              <h3>할 일 <span className="hint">
+                {p.todos.length ? `남은 일 ${남은할일}건 / 전체 ${p.todos.length}건` : ""}
+              </span></h3>
+              <div id="todoList">
+                {정렬된할일.map((t) => {
+                  const 남은일 = t.due ? daysBetween(todayISO(), t.due) : null;
+                  const 급함 = !t.done && 남은일 !== null && 남은일 <= 3;
+                  return (
+                    <div key={t.id} className={"todo " + (t.done ? "done" : "")}>
+                      <input type="checkbox" checked={t.done} aria-label="완료 표시"
+                             onChange={() => void run(() => api.toggleTodo(p.id, t.id))} />
+                      <div style={{ flex: 1 }}>
+                        <div className="tx">{t.text}</div>
+                        {t.due && (
+                          <div className={"due" + (급함 ? " soon" : "")}>
+                            {dots(t.due)}
+                            {!t.done && (남은일! < 0 ? ` · ${Math.abs(남은일!)}일 지남`
+                              : 남은일 === 0 ? " · 오늘까지" : ` · ${남은일}일 남음`)}
+                          </div>
+                        )}
+                      </div>
+                      <button type="button" className="rm" aria-label="할 일 삭제"
+                              onClick={() => void run(() => api.removeTodo(p.id, t.id))}>×</button>
+                    </div>
+                  );
+                })}
+
+                {/* 맨 아래 줄에서 바로 적습니다. Enter 로 들어가고 입력칸은 열린 채로
+                    있어 여러 건을 이어서 적을 수 있습니다. */}
+                <div className="todo todo-new">
+                  <span className="plus" aria-hidden="true">+</span>
+                  <input
+                    className="todo-new-input"
+                    aria-label="할 일 추가"
+                    placeholder={picked ? `${dots(picked)} 기한으로 추가` : "할 일을 적고 Enter"}
+                    value={todoText}
+                    onChange={(e) => setTodoText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); addTodo(); }
+                      if (e.key === "Escape") setTodoText("");
+                    }}
+                    onBlur={() => { if (todoText.trim()) addTodo(); }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="card">
             <h2>예산 집행</h2>
             <div className="money-line">
-              <span className="big" id="bdSpent">{fmtEok(p.spent)}</span>
-              <span className="of" id="bdTotal">/ {fmtEok(p.budget)}</span>
+              <span className="big" id="bdSpent">{fmtMoney(p.spent)}</span>
+              <span className="of" id="bdTotal">/ {fmtMoney(p.budget)}</span>
             </div>
             <div className="meter">
               <div className="track"><div className="fill" id="bdFill" style={{ width: `${clamp(p.rate, 0, 100)}%` }} /></div>
-              <div className="lbls"><span>0</span><span id="bdMax">{fmtEok(p.budget)}</span></div>
+              <div className="lbls"><span>0</span><span id="bdMax">{fmtMoney(p.budget)}</span></div>
             </div>
             <div className="minirow">
               <div className="stat"><div className="k">기간 경과</div><div className="v" id="bdElapsed">{p.planned}%</div></div>
               <div className="stat"><div className="k">집행률</div><div className="v" id="bdRate">{p.rate.toFixed(1)}%</div></div>
-              <div className="stat"><div className="k">잔액</div><div className="v" id="bdLeft">{fmtEok(p.left)}</div></div>
+              <div className="stat"><div className="k">잔액</div><div className="v" id="bdLeft">{fmtMoney(p.left)}</div></div>
             </div>
 
             {/* 비목별 줄 — 오른쪽 숫자는 '잔액'입니다.
@@ -234,7 +299,7 @@ export default function Dashboard({
                         </span>
                         {c.allocated > 0 ? (
                           <span className="v" style={초과 ? { color: "var(--crit-ink)" } : undefined}>
-                            {fmtEok(잔액)}
+                            {fmtMoney(잔액)}
                           </span>
                         ) : (
                           <button type="button" className="v none link" onClick={onEdit}
@@ -291,75 +356,6 @@ export default function Dashboard({
                 </>
               )}
             </div>
-          </div>
-
-          {/* 이 사업의 할 일 */}
-          <div className="card">
-            <h2>할 일 <span className="hint" id="todoHint">
-              {p.todos.length ? `남은 일 ${남은할일}건 / 전체 ${p.todos.length}건` : ""}
-            </span></h2>
-            <form className="todo-add" id="todoForm" onSubmit={addTodo}>
-              <input id="todoText" placeholder="할 일을 적어 주세요"
-                     value={todoText} onChange={(e) => setTodoText(e.target.value)} />
-              <input id="todoDue" type="date" aria-label="기한 (선택)"
-                     value={todoDue} onChange={(e) => setTodoDue(e.target.value)} />
-              <button type="submit" className="btn-add todo-btn">추가</button>
-            </form>
-            <div id="todoList">
-              {정렬된할일.length ? 정렬된할일.map((t) => {
-                const 남은일 = t.due ? daysBetween(todayISO(), t.due) : null;
-                const 급함 = !t.done && 남은일 !== null && 남은일 <= 3;
-                return (
-                  <div key={t.id} className={"todo " + (t.done ? "done" : "")}>
-                    <input type="checkbox" checked={t.done} aria-label="완료 표시"
-                           onChange={() => void run(() => api.toggleTodo(p.id, t.id))} />
-                    <div style={{ flex: 1 }}>
-                      <div className="tx">{t.text}</div>
-                      {t.due && (
-                        <div className={"due" + (급함 ? " soon" : "")}>
-                          {dots(t.due)}
-                          {!t.done && (남은일! < 0 ? ` · ${Math.abs(남은일!)}일 지남`
-                            : 남은일 === 0 ? " · 오늘까지" : ` · ${남은일}일 남음`)}
-                        </div>
-                      )}
-                    </div>
-                    <button type="button" className="rm" aria-label="할 일 삭제"
-                            onClick={() => void run(() => api.removeTodo(p.id, t.id))}>×</button>
-                  </div>
-                );
-              }) : <div className="empty">적어 둔 할 일이 없습니다.</div>}
-            </div>
-          </div>
-
-          {/* 이 사업의 일정 */}
-          <div className="card cal-card" id="calCard-dash">
-            <h2>사업 일정
-              <button type="button" className="cal-zoom" id="calZoomBtn-dash"
-                      title="크게 보기" aria-label="달력 크게 보기"
-                      onClick={() => onZoom("dash", ym, picked)}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <polyline points="15 3 21 3 21 9" />
-                  <polyline points="9 21 3 21 3 15" />
-                  <line x1="21" y1="3" x2="14" y2="10" />
-                  <line x1="3" y1="21" x2="10" y2="14" />
-                </svg>
-              </button>
-            </h2>
-            <div className="cal-head">
-              <button type="button" className="cal-nav" onClick={() => moveCal(-1)} aria-label="이전 달">‹</button>
-              <div className="cal-title" id="calTitle-dash">{ym.getFullYear()}년 {ym.getMonth() + 1}월</div>
-              <button type="button" className="cal-nav" onClick={() => moveCal(1)} aria-label="다음 달">›</button>
-              <button type="button" className="mini-btn cal-today" onClick={() => moveCal(0)}>오늘</button>
-            </div>
-            <div className="cal-dow" aria-hidden="true">
-              <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-            </div>
-            <Calendar
-              ym={ym} picked={picked} big={false} events={events} runs={runs}
-              showRunLegend={false} onPick={(iso) => setPicked(picked === iso ? "" : iso)}
-              onGo={onGo} idSuffix="dash"
-            />
           </div>
 
           <div className="card span2">

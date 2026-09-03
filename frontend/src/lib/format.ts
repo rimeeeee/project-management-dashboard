@@ -1,9 +1,13 @@
 /* 표시용 변환 — 프로토타입의 같은 이름 함수를 그대로 옮겼습니다.
-   금액은 원 단위로 저장하고, 여기서만 억으로 바꿔 적습니다. */
+   금액은 저장도 입력도 표시도 모두 원 단위입니다.
+   전에는 화면에만 억으로 줄여 적었는데, 실제 금액을 바로 읽을 수 없어
+   원 단위로 통일했습니다. */
 
-export const fmtEok = (won: number) =>
-  (won / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 2 }) + "억";
+/** 3,800,000,000원 — 단위까지 붙여 줍니다 */
+export const fmtMoney = (won: number) =>
+  Math.round(won).toLocaleString("ko-KR") + "원";
 
+/** 3,800,000,000 — 단위 없이 숫자만. 뒤에 다른 말을 붙일 때 씁니다 */
 export const fmtWon = (won: number) => Math.round(won).toLocaleString("ko-KR");
 
 export const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));

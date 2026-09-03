@@ -91,6 +91,40 @@ def _core_numbers(p: Project) -> dict[str, Any]:
     }
 
 
+def _stage_rows(p) -> list[dict]:
+    """
+    단계별 완료 집계. '지금 어느 단계인지' 도 여기서 정합니다.
+
+    현재 단계 = 아직 끝나지 않은 과제가 처음 나오는 단계.
+    사람이 손으로 골라 두면 바꾸는 것을 잊어 실제와 어긋나므로 계산해서 씁니다.
+    (예전 값 p.stage 는 그대로 두어, 필요하면 견주어 볼 수 있게 합니다)
+    """
+    묶음: dict[int, list] = {i: [] for i in range(len(calc.STAGES))}
+    for t in p.tasks:
+        묶음.setdefault(t.stage, []).append(t)
+
+    현재 = None
+    for i in sorted(묶음):
+        if any(not t.done for t in 묶음[i]):
+            현재 = i
+            break
+    if 현재 is None and any(묶음.values()):
+        현재 = max(i for i, v in 묶음.items() if v)      # 다 끝났으면 마지막 단계
+
+    rows = []
+    for i, name in enumerate(calc.STAGES):
+        items = 묶음.get(i, [])
+        done = sum(1 for t in items if t.done)
+        rows.append({
+            "name": name,
+            "done": done,
+            "total": len(items),
+            "rate": calc.js_round(100 * done / len(items)) if items else 0,
+            "current": i == 현재,
+        })
+    return rows
+
+
 def summary(p: Project) -> dict[str, Any]:
     """전체 사업 현황 표와 왼쪽 사업 목록에서 쓰는 모양"""
     iss = latest_issue(p)
@@ -163,7 +197,14 @@ def detail(p: Project) -> dict[str, Any]:
             {"name": c.name, "allocated": c.budget_amount} for c in p.categories
         ],
         "catRows": cats,
-        "tasks": [{"name": t.name, "done": t.done} for t in p.tasks],
+        "tasks": [
+            {"name": t.name, "done": t.done, "stage": t.stage}
+            for t in sorted(p.tasks, key=lambda x: (x.sort_order, x.id))
+        ],
+        # 단계별로 몇 건 중 몇 건이 끝났는지. 전체 진행률과 달리 '어느 구간에서
+        # 막혀 있는지' 를 봅니다. 과제가 하나도 없는 단계는 count 0 으로 나가고
+        # 화면에서 '과제 없음' 으로 적습니다.
+        "stageRows": _stage_rows(p),
         "kpis": kpis,
         "todos": [
             {"id": t.id, "text": t.text, "due": _iso(t.due), "done": t.done}

@@ -21,6 +21,25 @@ export default function Sidebar({
   const [theme, setTheme] = useState<Theme>(() => currentTheme());
   const has = !!manualUrl.trim();
 
+  /* 종료일이 지난 사업은 접어 둡니다. 끝난 사업이 쌓이면 지금 챙겨야 할
+     사업이 목록에서 묻힙니다. 지운 것이 아니라 접어 둔 것이라 눌러서
+     펼쳐 볼 수 있고, 들어가면 자료도 그대로 있습니다. */
+  const 진행중 = projects.filter((p) => p.dday.cls !== "closed");
+  const 종료됨 = projects.filter((p) => p.dday.cls === "closed");
+  const [종료펼침, set종료펼침] = useState(false);
+
+  const 사업버튼 = (p: ProjectSummary) => (
+    <button
+      key={p.id}
+      className={"nav-btn" + (view === "dash" && currentId === p.id ? " active" : "")}
+      onClick={() => onGo("dash", p.id)}
+      title={p.name}
+    >
+      <span className={"dot " + p.status.key} />
+      <span className="nm">{p.name}</span>
+    </button>
+  );
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -41,17 +60,22 @@ export default function Sidebar({
       <nav className="nav-group" aria-label="내 사업">
         <div className="nav-label">내 사업</div>
         <div id="projNav">
-          {projects.map((p) => (
-            <button
-              key={p.id}
-              className={"nav-btn" + (view === "dash" && currentId === p.id ? " active" : "")}
-              onClick={() => onGo("dash", p.id)}
-              title={p.name}
-            >
-              <span className={"dot " + p.status.key} />
-              <span className="nm">{p.name}</span>
-            </button>
-          ))}
+          {진행중.map(사업버튼)}
+          {진행중.length === 0 && 종료됨.length > 0 && (
+            <div className="nav-none">진행 중인 사업이 없습니다</div>
+          )}
+
+          {종료됨.length > 0 && (
+            <>
+              <button type="button" className="nav-fold"
+                      aria-expanded={종료펼침}
+                      onClick={() => set종료펼침(!종료펼침)}>
+                <span className="caret" aria-hidden="true">{종료펼침 ? "▾" : "▸"}</span>
+                종료된 사업 {종료됨.length}
+              </button>
+              {종료펼침 && <div className="nav-closed">{종료됨.map(사업버튼)}</div>}
+            </>
+          )}
         </div>
       </nav>
 
