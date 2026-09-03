@@ -358,29 +358,6 @@ export default function Dashboard({
             </div>
           </div>
 
-          {/* 이 사업의 진행 단계 */}
-          <div className="card span2">
-            <h2>진행 단계</h2>
-            <div className="stages" id="stageGauge">
-              {p.stages.map((nm, i) => (
-                <div key={nm} className={"stage " + (i < p.stage ? "done" : i === p.stage ? "now" : "")}>
-                  <div className="seg" /><div className="nm">{nm}</div>
-                </div>
-              ))}
-            </div>
-            <div className="stagelist" id="stageList">
-              {p.stages.map((nm, i) => {
-                const note = (p.stageNotes[i] || "").trim();
-                return (
-                  <div key={nm} className={"stagerow " + (i < p.stage ? "done" : i === p.stage ? "now" : "")}>
-                    <span className="nm">{nm}</span>
-                    <span className={"tx " + (note ? "" : "empty")}>{note || "—"}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
           <div className="card span2">
             <h2>입력 내역 <span className="hint" id="histHint">{p.cycleWord} 보고 · 총 {p.entries.length}건</span></h2>
             <div className="tbl-wrap"><table className="tbl">

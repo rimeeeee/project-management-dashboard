@@ -45,6 +45,9 @@ class KpiIn(BaseModel):
 
 class TaskIn(BaseModel):
     name: str = ""
+    # 0 기획 · 1 착수 · 2 진행 · 3 마무리 · 4 완료.
+    # 옛 화면은 보내지 않으므로 기본값을 둡니다.
+    stage: int = 2
 
 
 class CategoryIn(BaseModel):
@@ -74,7 +77,7 @@ class Cleaned(BaseModel):
     budget: int
     cycle: str
     kpis: list[KpiIn]
-    tasks: list[str]
+    tasks: list[TaskIn]
     categories: list[CategoryIn]
 
 
@@ -113,7 +116,10 @@ def clean(body: ProjectIn) -> Cleaned:
         seen_kpi.add(nm)
         kpis.append(KpiIn(name=nm, target=k.target, unit=k.unit.strip() or "건"))
 
-    tasks = [t.name.strip() for t in body.tasks if t.name.strip()]
+    tasks = [
+        TaskIn(name=t.name.strip(), stage=min(4, max(0, t.stage)))
+        for t in body.tasks if t.name.strip()
+    ]
 
     cats: list[CategoryIn] = []
     seen_cat: set[str] = set()
@@ -162,8 +168,9 @@ def _set_lists(db: Session, p: Project, c: Cleaned, done_by_name: dict[str, bool
     )
     # 같은 이름의 과제는 완료 체크 상태를 유지합니다
     p.tasks.extend(
-        ProjectTask(name=nm, done=done_by_name.get(nm, False), sort_order=i)
-        for i, nm in enumerate(c.tasks)
+        ProjectTask(name=t.name, done=done_by_name.get(t.name, False),
+                    sort_order=i, stage=t.stage)
+        for i, t in enumerate(c.tasks)
     )
     p.categories.extend(
         ProjectCategory(name=x.name, budget_amount=x.allocated, sort_order=i)

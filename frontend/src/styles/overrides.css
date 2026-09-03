@@ -220,6 +220,3 @@
 .todo-new-input::placeholder{color:var(--muted)}
 .todo-new:focus-within{background:var(--surface-2); border-radius:8px}
 
-/* 달력 범례 — 할 일 점이 사업마다 다른 색이라, 여러 사업을 함께 보는 화면에서는
-   고정 색 대신 '사업 색' 이라고 알려 줍니다. */
-.cal-legend .k-note{color:var(--muted); font-size:12.6px}

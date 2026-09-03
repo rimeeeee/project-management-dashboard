@@ -50,7 +50,9 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
   const [budget, setBudget] = useState("");
   const [cycle, setCycle] = useState("주간");
   const [kpis, setKpis] = useState<KpiRow[]>([]);
-  const [tasks, setTasks] = useState<string[]>([]);
+  /* 과제는 이름과 단계를 함께 들고 있습니다. 과제를 새로 더하면 바로 위
+     과제와 같은 단계로 시작해서, 단계가 바뀌는 곳만 고르면 됩니다. */
+  const [tasks, setTasks] = useState<{ name: string; stage: number }[]>([]);
   const [cats, setCats] = useState<CatRow[]>([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -67,7 +69,9 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
       setKpis(editing.kpis.length
         ? editing.kpis.map((k) => ({ name: k.name, target: String(k.target), unit: k.unit }))
         : [{ name: "", target: "", unit: "" }]);
-      setTasks(editing.tasks.length ? editing.tasks.map((t) => t.name) : [""]);
+      setTasks(editing.tasks.length
+        ? editing.tasks.map((t) => ({ name: t.name, stage: t.stage }))
+        : [{ name: "", stage: 1 }]);
       setCats(editing.categories.length
         ? editing.categories.map((c) => ({ name: c.name, amt: c.allocated ? commas(String(c.allocated)) : "" }))
         : [{ name: "", amt: "" }]);
@@ -79,7 +83,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
       setFolder(""); setStart(""); setEnd("");
       setCycle("주간");
       setKpis(Array.from({ length: 4 }, () => ({ name: "", target: "", unit: "" })));
-      setTasks(Array.from({ length: 4 }, () => ""));
+      setTasks(Array.from({ length: 4 }, () => ({ name: "", stage: 1 })));
       setCats(DEFAULT_CATEGORIES.map((c) => ({ name: c, amt: "" })));
     }
     setErr("");
@@ -102,7 +106,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
       kpis: kpis.map((k) => ({
         name: k.name, target: Number(k.target.replace(/,/g, "")) || 0, unit: k.unit,
       })),
-      tasks: tasks.map((t) => ({ name: t })),
+      tasks: tasks.map((t) => ({ name: t.name, stage: t.stage })),
       categories: cats.map((c) => ({ name: c.name, amt: c.amt })).map((c) => ({
         name: c.name, allocated: Number(onlyDigits(c.amt)) || 0,
       })),
@@ -216,15 +220,19 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
           <div id="rgTaskRows">
             {tasks.map((t, i) => (
               <div key={i} className="dyn-row task">
-                <input placeholder="추진과제" className="t-nm" value={t}
-                       onChange={(e) => setTasks(tasks.map((x, j) => j === i ? e.target.value : x))} />
+                <input placeholder="추진과제" className="t-nm" value={t.name}
+                       onChange={(e) => setTasks(tasks.map((x, j) =>
+                         j === i ? { ...x, name: e.target.value } : x))} />
                 <button type="button" className="rm" aria-label="과제 삭제"
                         onClick={() => setTasks(tasks.filter((_, j) => j !== i))}>×</button>
               </div>
             ))}
           </div>
+          <p className="hint" style={{ marginTop: 6 }}>과제는 진행 순서대로 적습니다.</p>
           <button type="button" className="btn-add"
-                  onClick={() => setTasks([...tasks, ""])}>+ 추진과제 추가</button>
+                  onClick={() => setTasks([...tasks,
+                    { name: "", stage: tasks.length ? tasks[tasks.length - 1].stage : 1 }])}>
+            + 추진과제 추가</button>
         </div>
 
         <div className="card">

@@ -86,7 +86,10 @@ export interface ProjectDetail extends ProjectSummary {
   stageNotes: string[];
   categories: { name: string; allocated: number }[];
   catRows: CatRow[];
-  tasks: { name: string; done: boolean }[];
+  tasks: { name: string; done: boolean; stage: number }[];
+  /* 단계별 완료 집계. current 는 '아직 끝나지 않은 과제가 처음 나오는 단계' 로
+     서버가 계산합니다(손으로 고르지 않습니다). */
+  stageRows: { name: string; done: number; total: number; rate: number; current: boolean }[];
   kpis: Kpi[];
   todos: Todo[];
   entries: Entry[];

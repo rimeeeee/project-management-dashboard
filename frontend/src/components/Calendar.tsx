@@ -13,7 +13,20 @@ import { clamp, daysBetween, isoOf, todayISO } from "../lib/format";
 /* 사업 띠 색 — 사업 순서대로 돌아가며 씁니다.
    범례에 이미 쓰는 청록(시작)·빨강(종료)·보라(할 일)는 넣지 않습니다.
    사업이 6개를 넘으면 색이 다시 돌아옵니다. */
-export const RUN_COLORS = ["#e0a112", "#e0629b", "#3f9142", "#b5651d", "#4a7fe0", "#00897b"];
+/* 사업 구분 색 — 병원 정체성에 맞춘 파랑 계열 팔레트.
+   밝은 하늘색에서 짙은 남색까지 명도가 크게 벌어져 있어, 같은 계열이면서도
+   서로 구분됩니다. 색만으로 구분이 어려운 분도 있으므로 달력 범례에는
+   사업 이름을 늘 함께 적습니다.
+
+   맨 앞 두 색(#caf0f8 · #90e0ef)은 흰 바탕에서 옅어 글자 배경으로는 쓰지 않고
+   띠·점처럼 면으로 칠하는 곳에만 씁니다. */
+export const RUN_COLORS = [
+  "#0077b6",   // 파랑
+  "#00b4d8",   // 밝은 하늘
+  "#03045e",   // 남색
+  "#90e0ef",   // 옅은 하늘
+  "#caf0f8",   // 아주 옅은 하늘
+];
 export const runColor = (i: number) => RUN_COLORS[i % RUN_COLORS.length];
 
 export interface CalEvent {
@@ -213,11 +226,12 @@ export default function Calendar({
         <div className="row">
           <span><i className="k-start" />사업 시작</span>
           <span><i className="k-end" />사업 종료</span>
-          {/* 할 일 점은 그 사업의 색을 씁니다. 사업이 하나면 그 색을 그대로 보여 주고,
-              여럿이면 색이 제각각이라 '사업 색' 이라고만 적습니다. */}
-          {runs.length === 1
-            ? <span><i className="k-todo" style={{ background: runs[0].color }} />할 일 기한</span>
-            : <span><i className="k-todo" />할 일 기한 <span className="k-note">(사업 색)</span></span>}
+          {/* 할 일 점은 그 사업의 색을 씁니다. 사업이 하나뿐인 대시보드에서는
+              그 색을 보여 주면 뜻이 통하지만, 여러 사업을 함께 보는 화면에서는
+              색이 제각각이라 범례에 넣을 대표 색이 없습니다. 그때는 뺍니다. */}
+          {runs.length === 1 && (
+            <span><i className="k-todo" style={{ background: runs[0].color }} />할 일 기한</span>
+          )}
         </div>
         {/* 사업 대시보드에서는 사업이 하나뿐이고 이름이 화면 제목에 이미 있으므로
             사업 범례 줄을 넣지 않습니다. */}

@@ -35,6 +35,38 @@ def test_사업을_등록한다(client):
     assert len(d["stageNotes"]) == 5
 
 
+def test_과제의_단계를_저장하고_단계별로_집계한다(client):
+    """
+    단계는 '어느 구간에서 막혔는지' 를 보려는 것입니다.
+    전체 진행률(완료 과제 ÷ 전체 과제)은 이것과 상관없이 그대로입니다.
+    """
+    pid = client.post(P, json=payload(tasks=[
+        {"name": "착수보고", "stage": 1},
+        {"name": "요구사항 정의", "stage": 1},
+        {"name": "구축", "stage": 2},
+        {"name": "결과보고", "stage": 4},
+    ])).json()["id"]
+
+    d = client.get(f"{P}/{pid}").json()
+    assert [t["stage"] for t in d["tasks"]] == [1, 1, 2, 4]
+
+    행 = {r["name"]: r for r in d["stageRows"]}
+    assert (행["착수"]["done"], 행["착수"]["total"]) == (0, 2)
+    assert (행["진행"]["done"], 행["진행"]["total"]) == (0, 1)
+    assert 행["기획"]["total"] == 0          # 과제 없는 단계도 자리는 있습니다
+
+
+def test_지금_단계는_끝나지_않은_과제가_처음_나오는_단계다(client):
+    """사람이 골라 두면 바꾸는 것을 잊어 어긋나므로 계산해서 씁니다."""
+    pid = client.post(P, json=payload(tasks=[
+        {"name": "A", "stage": 1},
+        {"name": "B", "stage": 2},
+    ])).json()["id"]
+
+    현재 = [r["name"] for r in client.get(f"{P}/{pid}").json()["stageRows"] if r["current"]]
+    assert 현재 == ["착수"]        # 아무것도 완료하지 않았으므로 첫 단계
+
+
 def test_총사업비를_원_단위로_저장한다(client):
     assert client.post(P, json=payload(budget=75_000_000)).json()["budget"] == 75_000_000
     assert client.post(P, json=payload(budget=1_200_000_000)).json()["budget"] == 1_200_000_000
