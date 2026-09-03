@@ -1,7 +1,7 @@
 /* 전체 사업 현황 — 프로토타입 renderHome() 을 그대로 옮겼습니다. */
 import { useState } from "react";
 import Calendar, { calData } from "../components/Calendar";
-import { clamp, dots, fmtEok, todayISO } from "../lib/format";
+import { clamp, dots, fmtMoney, todayISO } from "../lib/format";
 import type { ProjectDetail, ProjectSummary } from "../lib/types";
 
 interface Props {
@@ -54,12 +54,12 @@ export default function Home({ projects, details, onGo, onZoom }: Props) {
         <div className="tile">
           {ic(<><path d="M3 6h18v12H3z"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></>)}
           <div className="k">총 사업비</div>
-          <div className="v">{fmtEok(totalBudget)}</div>
+          <div className="v">{fmtMoney(totalBudget)}</div>
         </div>
         <div className="tile">
           {ic(<><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></>)}
           <div className="k">총 집행액</div>
-          <div className="v">{fmtEok(totalSpent)} <span className="unit">집행률 {execRate.toFixed(1)}%</span></div>
+          <div className="v">{fmtMoney(totalSpent)} <span className="unit">집행률 {execRate.toFixed(1)}%</span></div>
           <div className="tile-meter"><i style={{ width: `${clamp(execRate, 0, 100)}%` }} /></div>
         </div>
         <div className={"tile" + (attention ? " alert" : "")}>
@@ -143,10 +143,16 @@ export default function Home({ projects, details, onGo, onZoom }: Props) {
                     {p.diff >= 0 ? "+" : "−"}{Math.abs(p.diff)}%p
                   </span>
                 </td>
+                {/* 금액을 원 단위로 적으니 칸을 넘겼습니다. 집행률만 두고,
+                    실제 금액은 대시보드의 비목별 막대와 같은 방식으로
+                    막대에 마우스를 올렸을 때 위에 띄웁니다. */}
                 <td>
                   <span className="cellnum">{p.rate.toFixed(1)}%</span>{" "}
-                  <span className="cellsub">{fmtEok(p.spent)} / {fmtEok(p.budget)}</span>
-                  <div className="minibar"><i style={{ width: `${clamp(p.rate, 0, 100)}%` }} /></div>
+                  <span className="cellsub">집행</span>
+                  <div className="bar-hover">
+                    <div className="minibar"><i style={{ width: `${clamp(p.rate, 0, 100)}%` }} /></div>
+                    <span className="tip">{fmtMoney(p.spent)} / {fmtMoney(p.budget)}</span>
+                  </div>
                 </td>
                 <td className="cellsub">
                   {dots(p.start)}<br />~ {dots(p.end)}
