@@ -220,3 +220,21 @@
 .todo-new-input::placeholder{color:var(--muted)}
 .todo-new:focus-within{background:var(--surface-2); border-radius:8px}
 
+
+/* ── 종료된 사업 접기 ─────────────────────────────────────────────
+   종료일이 지난 사업은 접어 둡니다. 지운 것이 아니라 눌러서 펼쳐 볼 수
+   있고, 들어가면 자료도 그대로 있습니다.
+   전체 현황의 합계(총 사업비·총 집행액)는 진행 중인 사업만 셉니다.
+   끝난 사업까지 더하면 '여태 한 사업 전부' 가 되어 지금 규모를 알 수
+   없습니다. 달력의 사업 기간 띠는 종료된 것도 그대로 둡니다. */
+.nav-fold{
+  display:flex; align-items:center; gap:6px; width:100%;
+  padding:7px 10px; border:0; background:transparent;
+  color:var(--muted); font-size:14px; cursor:pointer; text-align:left;
+}
+.nav-fold:hover{color:var(--ink-2)}
+.nav-fold .caret{font-size:11px; width:10px}
+.nav-none{padding:7px 10px; color:var(--muted); font-size:13.8px}
+/* 접어 둔 사업은 눈에 덜 걸리게 */
+.nav-closed .nav-btn .nm{color:var(--muted)}
+.fold-row td{border-bottom:none; padding-top:4px; padding-bottom:4px}
