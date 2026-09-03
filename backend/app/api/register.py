@@ -58,8 +58,7 @@ class ProjectIn(BaseModel):
     folderUrl: str = ""
     start: str = ""
     end: str = ""
-    # 화면에서는 억원으로 받고, 여기서 원으로 바꿔 저장합니다.
-    budgetEok: float = 0
+    budget: int = 0            # 원 단위
     cycle: str = WEEKLY
     kpis: list[KpiIn] = Field(default_factory=list)
     tasks: list[TaskIn] = Field(default_factory=list)
@@ -97,9 +96,9 @@ def clean(body: ProjectIn) -> Cleaned:
     if not (start < end):
         raise bad("사업 기간을 확인하세요 (시작일 < 종료일).")
 
-    if body.budgetEok <= 0:
-        raise bad("총 사업비는 0보다 큰 숫자(억원)로 입력하세요.")
-    budget = round(body.budgetEok * 1e8)      # 억 → 원
+    if body.budget <= 0:
+        raise bad("총 사업비는 0보다 큰 숫자(원)로 입력하세요.")
+    budget = int(body.budget)
 
     if body.cycle not in CYCLES:
         raise bad("보고 주기가 올바르지 않습니다.")

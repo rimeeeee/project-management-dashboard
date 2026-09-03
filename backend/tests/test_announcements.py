@@ -166,7 +166,7 @@ def test_관심을_켜고_끈다(client, seeded):
 def test_공고를_직접_등록한다(client, seeded):
     r = client.post(A, json={
         "title": "직접 넣은 공고", "ministry": "보건복지부",
-        "openFrom": "2026-09-01", "due": "2026-09-30", "amountEok": 3.8,
+        "openFrom": "2026-09-01", "due": "2026-09-30", "amount": 380_000_000,
     })
     assert r.status_code == 200
     got = next(x for x in client.get(f"{A}?size=50").json()["items"] if x["id"] == r.json()["id"])
@@ -186,7 +186,7 @@ def test_직접_등록한_공고는_수집이_덮어쓰지_않는다(client, see
 
     client.put(f"{A}/a1", json={
         "title": "손으로 고친 제목", "ministry": "보건산업진흥원",
-        "openFrom": "2026-08-01", "due": "2026-12-31", "amountEok": 5,
+        "openFrom": "2026-08-01", "due": "2026-12-31", "amount": 500_000_000,
         "contact": "02-000-0000", "url": "https://example.test/a1",
     })
     s = SessionLocal()

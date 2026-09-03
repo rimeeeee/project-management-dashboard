@@ -59,7 +59,7 @@ export interface CollectorStatus {
 export interface AnnInput {
   title: string; ministry: string; agency: string; program: string; no: string;
   posted: string; openFrom: string; due: string; dueTime: string;
-  amountEok: number; contact: string; url: string;
+  amount: number; contact: string; url: string;
 }
 
 export const annApi = {

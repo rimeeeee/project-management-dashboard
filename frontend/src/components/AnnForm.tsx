@@ -15,7 +15,7 @@ export default function AnnForm({ ann, ministries, onDone, onClose }: Props) {
   const [v, setV] = useState<AnnInput>({
     title: "", ministry: "", agency: "", program: "", no: "",
     posted: "", openFrom: "", due: "", dueTime: "18:00",
-    amountEok: 0, contact: "", url: "",
+    amount: 0, contact: "", url: "",
   });
   const [amountText, setAmountText] = useState("");
   const [err, setErr] = useState("");
@@ -27,9 +27,9 @@ export default function AnnForm({ ann, ministries, onDone, onClose }: Props) {
         title: ann.title, ministry: ann.ministry, agency: ann.agency,
         program: ann.program, no: ann.no, posted: ann.posted,
         openFrom: ann.openFrom, due: ann.due, dueTime: ann.dueTime || "18:00",
-        amountEok: ann.amount / 1e8, contact: ann.contact, url: ann.url,
+        amount: ann.amount, contact: ann.contact, url: ann.url,
       });
-      setAmountText(ann.amount ? String(ann.amount / 1e8) : "");
+      setAmountText(ann.amount ? String(ann.amount) : "");
     }
   }, [ann]);
 
@@ -40,7 +40,7 @@ export default function AnnForm({ ann, ministries, onDone, onClose }: Props) {
     if (busy) return;
     setBusy(true);
     setErr("");
-    const body = { ...v, amountEok: Number(amountText.replace(/,/g, "")) || 0 };
+    const body = { ...v, amount: Number(amountText.replace(/,/g, "")) || 0 };
     try {
       if (ann) await annApi.update(ann.id, body);
       else await annApi.create(body);
@@ -90,8 +90,8 @@ export default function AnnForm({ ann, ministries, onDone, onClose }: Props) {
             <input id="anPosted" type="date" value={v.posted} onChange={(e) => set("posted", e.target.value)} />
           </div>
           <div className="f">
-            <label htmlFor="anAmount">공고금액 (억원)</label>
-            <input id="anAmount" type="text" inputMode="decimal" placeholder="예: 38"
+            <label htmlFor="anAmount">공고금액 (원)</label>
+            <input id="anAmount" type="text" inputMode="numeric" placeholder="예: 3800000000"
                    value={amountText} onChange={(e) => setAmountText(e.target.value)} />
           </div>
           <div className="f">

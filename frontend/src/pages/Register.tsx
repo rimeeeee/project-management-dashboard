@@ -4,8 +4,7 @@
    확인 순서와 문구는 프로토타입 그대로입니다(사업명 → 기간 → 총사업비 →
    비목 → 추진과제 → 성과지표). 서버에서도 같은 순서로 다시 확인합니다.
 
-   총 사업비는 화면에서 '억원'으로 받고 서버에서 '원'으로 바꿔 저장합니다.
-   비목 배정액은 원 단위 그대로 받습니다. */
+   금액은 총 사업비도 비목 배정액도 모두 원 단위로 받습니다. */
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { ProjectDetail } from "../lib/types";
@@ -27,7 +26,7 @@ interface CatRow { name: string; amt: string }
 export interface Prefill {
   name: string;
   agency: string;
-  budget: string;      // 억원, 화면에 보이는 그대로
+  budget: string;      // 원, 화면에 보이는 그대로
 }
 
 interface Props {
@@ -63,7 +62,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
       setFolder(editing.folderUrl);
       setStart(editing.start);
       setEnd(editing.end);
-      setBudget((editing.budget / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 4 }));
+      setBudget(editing.budget ? editing.budget.toLocaleString("ko-KR") : "");
       setCycle(editing.cycle);
       setKpis(editing.kpis.length
         ? editing.kpis.map((k) => ({ name: k.name, target: String(k.target), unit: k.unit }))
@@ -98,7 +97,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
     setErr("");
     const payload = {
       name, agency, folderUrl: folder, start, end,
-      budgetEok: Number(budget.replace(/,/g, "")) || 0,
+      budget: Number(budget.replace(/,/g, "")) || 0,
       cycle,
       kpis: kpis.map((k) => ({
         name: k.name, target: Number(k.target.replace(/,/g, "")) || 0, unit: k.unit,
@@ -172,8 +171,8 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
               <input id="rgEnd" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
             <div className="f">
-              <label htmlFor="rgBudget">총 사업비 (억원) *</label>
-              <input id="rgBudget" type="text" inputMode="decimal" placeholder="예: 9.5"
+              <label htmlFor="rgBudget">총 사업비 (원) *</label>
+              <input id="rgBudget" type="text" inputMode="numeric" placeholder="예: 950000000"
                      value={budget} onChange={(e) => setBudget(e.target.value)} />
             </div>
             <div className="f">
