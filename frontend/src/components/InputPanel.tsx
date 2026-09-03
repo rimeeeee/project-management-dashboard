@@ -9,7 +9,7 @@
    않아도 바로 반영됩니다. 회차에 딸린 값이 아니라 사업 자체의 값이기 때문입니다. */
 import { useEffect, useMemo, useState } from "react";
 import { api, ConflictError, type SaveEntryBody } from "../lib/api";
-import { fmtEok, fmtWon } from "../lib/format";
+import { fmtWon } from "../lib/format";
 import type { Entry, PeriodOption, ProjectDetail } from "../lib/types";
 
 interface SpendRow {
@@ -253,7 +253,7 @@ export default function InputPanel({
                 onClick={() => setSpends([...spends, { amt: "", cat: "" }])}>+ 집행 항목 추가</button>
         <div className="spend-sum" id="wkSpendSum">
           {sum.bad ? <>회차 합계 <b>—</b></>
-                   : <>회차 합계 <b>{fmtWon(sum.total)}</b> 원 ({fmtEok(sum.total)})</>}
+                   : <>회차 합계 <b>{fmtWon(sum.total)}</b> 원</>}
         </div>
       </div>
 
