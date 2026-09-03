@@ -21,6 +21,10 @@ export interface CalEvent {
   kind: "start" | "end" | "todo";
   label: string;
   pid?: string;
+  /* 그 일정이 어느 사업 것인지 색으로 알려 줍니다.
+     사업 기간 띠와 같은 색을 써서, 여러 사업이 섞인 전체 화면에서
+     '이 할 일이 어느 사업 것인지' 를 색만 보고 알 수 있게 합니다. */
+  color?: string;
 }
 
 export interface CalRun {
@@ -39,11 +43,16 @@ interface Props {
   showRunLegend: boolean;         // 사업이 여럿인 전체 화면에서만 띠 범례를 답니다
   onPick: (iso: string) => void;
   onGo?: (pid: string) => void;   // 일정 목록에서 사업 이름을 누르면 이동
+  /* 빈 날짜도 고를 수 있게 할지.
+     원래는 '그 날 일정을 보려고' 누르는 것이라 일정이 있는 날만 눌렸습니다.
+     사업 대시보드에서는 고른 날짜가 할 일 기한이 되므로, 아무것도 없는
+     날짜야말로 눌러야 합니다. 그 화면에서만 켭니다. */
+  pickAnyDay?: boolean;
   idSuffix: string;               // home / dash / full
 }
 
 export default function Calendar({
-  ym, picked, big, events, runs, showRunLegend, onPick, onGo, idSuffix,
+  ym, picked, big, events, runs, showRunLegend, onPick, onGo, idSuffix, pickAnyDay = false,
 }: Props) {
   const 연 = ym.getFullYear();
   const 월 = ym.getMonth();
@@ -89,7 +98,7 @@ export default function Calendar({
         iso === picked ? "sel" : "",
       ].filter(Boolean).join(" ");
 
-      const 누를수있음 = 목록.length > 0;
+      const 누를수있음 = pickAnyDay || 목록.length > 0;
       칸.push(
         <div
           key={iso}
@@ -111,7 +120,11 @@ export default function Calendar({
         >
           {d.getDate()}
           <span className="cal-dots">
-            {종류.map((k) => <i key={k} className={"dot-" + k} />)}
+            {종류.map((k) => {
+              // 할 일 점은 그 사업의 띠 색을 그대로 씁니다(같은 날 여러 사업이면 첫 번째).
+              const 색 = k === "todo" ? 목록.find((e) => e.kind === "todo")?.color : undefined;
+              return <i key={k} className={"dot-" + k} style={색 ? { background: 색 } : undefined} />;
+            })}
           </span>
           {목록.length > 0 && (
             <span className="cal-lbl">
@@ -200,7 +213,11 @@ export default function Calendar({
         <div className="row">
           <span><i className="k-start" />사업 시작</span>
           <span><i className="k-end" />사업 종료</span>
-          <span><i className="k-todo" />할 일 기한</span>
+          {/* 할 일 점은 그 사업의 색을 씁니다. 사업이 하나면 그 색을 그대로 보여 주고,
+              여럿이면 색이 제각각이라 '사업 색' 이라고만 적습니다. */}
+          {runs.length === 1
+            ? <span><i className="k-todo" style={{ background: runs[0].color }} />할 일 기한</span>
+            : <span><i className="k-todo" />할 일 기한 <span className="k-note">(사업 색)</span></span>}
         </div>
         {/* 사업 대시보드에서는 사업이 하나뿐이고 이름이 화면 제목에 이미 있으므로
             사업 범례 줄을 넣지 않습니다. */}
@@ -221,7 +238,8 @@ export default function Calendar({
           <>
             {보일것.map((e, i) => (
               <div key={i} className="cal-ev">
-                <i className={"dot-" + e.kind} />
+                <i className={"dot-" + e.kind}
+                   style={e.kind === "todo" && e.color ? { background: e.color } : undefined} />
                 <span className="d">{e.date.slice(5).replaceAll("-", ".")}</span>
                 <span className="nm">
                   {e.pid && onGo ? (
@@ -264,9 +282,11 @@ export function calData(
       const idx = allProjects.findIndex((x) => x.id === p.id);
       runs.push({ from: p.start, to: p.end, name: p.name, color: runColor(idx >= 0 ? idx : i) });
     }
+    const 사업색 = runColor(allProjects.findIndex((x) => x.id === p.id) >= 0
+      ? allProjects.findIndex((x) => x.id === p.id) : i);
     (p.todos || []).forEach((t) => {
       if (t.due && !t.done) {
-        events.push({ date: t.due, kind: "todo", label: `할 일 · ${t.text}`, pid: p.id });
+        events.push({ date: t.due, kind: "todo", label: `할 일 · ${t.text}`, pid: p.id, color: 사업색 });
       }
     });
   });
