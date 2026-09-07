@@ -52,6 +52,10 @@ class TaskIn(BaseModel):
 
 class CategoryIn(BaseModel):
     name: str = ""
+    # 배정액은 국고보조금과 자기부담금으로 나뉘어 내려옵니다.
+    # allocated 는 두 값의 합이고, 서버가 냅니다.
+    gov: int = 0
+    own: int = 0
     allocated: int = 0
 
 
@@ -128,7 +132,8 @@ def clean(body: ProjectIn) -> Cleaned:
         if not nm or nm in seen_cat:
             continue
         seen_cat.add(nm)
-        cats.append(CategoryIn(name=nm, allocated=max(0, c.allocated)))
+        gov, own = max(0, c.gov), max(0, c.own)
+        cats.append(CategoryIn(name=nm, gov=gov, own=own, allocated=gov + own))
 
     # 확인 순서도 프로토타입과 같습니다 (비목 → 추진과제 → 성과지표)
     if not cats:
@@ -173,7 +178,8 @@ def _set_lists(db: Session, p: Project, c: Cleaned, done_by_name: dict[str, bool
         for i, t in enumerate(c.tasks)
     )
     p.categories.extend(
-        ProjectCategory(name=x.name, budget_amount=x.allocated, sort_order=i)
+        ProjectCategory(name=x.name, budget_amount=x.allocated,
+                        budget_gov=x.gov, budget_self=x.own, sort_order=i)
         for i, x in enumerate(c.categories)
     )
 

@@ -84,7 +84,9 @@ export interface ProjectDetail extends ProjectSummary {
   stage: number;
   stages: string[];
   stageNotes: string[];
-  categories: { name: string; allocated: number }[];
+  /* allocated 는 gov + own 입니다. 화면 숫자는 이 합계를 쓰고,
+     나눈 둘은 사업을 고칠 때 입력칸을 다시 채우는 데 씁니다. */
+  categories: { name: string; allocated: number; gov: number; own: number }[];
   catRows: CatRow[];
   tasks: { name: string; done: boolean; stage: number }[];
   /* 단계별 완료 집계. current 는 '아직 끝나지 않은 과제가 처음 나오는 단계' 로

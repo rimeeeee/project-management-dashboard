@@ -6,6 +6,7 @@
 
    금액은 총 사업비도 비목 배정액도 모두 원 단위로 받습니다. */
 import { useEffect, useState } from "react";
+import { fmtMoney } from "../lib/format";
 import { api } from "../lib/api";
 import type { ProjectDetail } from "../lib/types";
 
@@ -19,7 +20,10 @@ const CYCLE_HELP: Record<string, string> = {
 const DEFAULT_CATEGORIES = ["인건비", "연구활동비", "장비·재료비", "여비", "회의·행사비", "외주용역비", "기타"];
 
 interface KpiRow { name: string; target: string; unit: string }
-interface CatRow { name: string; amt: string }
+/* 비목 한 줄. 배정액은 국고보조금과 자기부담금으로 나뉘어 내려오고,
+   비목마다 비율이 달라 비목별로 받습니다. 화면에 보이는 배정액·집행률은
+   두 값을 더한 합계 하나만 씁니다. */
+interface CatRow { name: string; gov: string; own: string }
 
 /* 공고에서 [사업 등록] 을 눌렀을 때 미리 채워 넣는 값.
    공고 목록에는 사업 기간·추진과제가 없으므로 채울 수 있는 것만 채웁니다. */
@@ -54,6 +58,11 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
      과제와 같은 단계로 시작해서, 단계가 바뀌는 곳만 고르면 됩니다. */
   const [tasks, setTasks] = useState<{ name: string; stage: number }[]>([]);
   const [cats, setCats] = useState<CatRow[]>([]);
+  const 비목합계 = cats.reduce((s, c) => {
+    const g = Number(onlyDigits(c.gov)) || 0;
+    const o = Number(onlyDigits(c.own)) || 0;
+    return { gov: s.gov + g, own: s.own + o, total: s.total + g + o };
+  }, { gov: 0, own: 0, total: 0 });
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -73,8 +82,12 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
         ? editing.tasks.map((t) => ({ name: t.name, stage: t.stage }))
         : [{ name: "", stage: 1 }]);
       setCats(editing.categories.length
-        ? editing.categories.map((c) => ({ name: c.name, amt: c.allocated ? commas(String(c.allocated)) : "" }))
-        : [{ name: "", amt: "" }]);
+        ? editing.categories.map((c) => ({
+            name: c.name,
+            gov: c.gov ? commas(String(c.gov)) : "",
+            own: c.own ? commas(String(c.own)) : "",
+          }))
+        : [{ name: "", gov: "", own: "" }]);
     } else {
       // 공고에서 넘어왔으면 옮겨 온 값으로 시작합니다
       setName(prefill?.name ?? "");
@@ -84,7 +97,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
       setCycle("주간");
       setKpis(Array.from({ length: 4 }, () => ({ name: "", target: "", unit: "" })));
       setTasks(Array.from({ length: 4 }, () => ({ name: "", stage: 1 })));
-      setCats(DEFAULT_CATEGORIES.map((c) => ({ name: c, amt: "" })));
+      setCats(DEFAULT_CATEGORIES.map((c) => ({ name: c, gov: "", own: "" })));
     }
     setErr("");
   }, [editing?.id, editing === null, prefill]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -107,8 +120,10 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
         name: k.name, target: Number(k.target.replace(/,/g, "")) || 0, unit: k.unit,
       })),
       tasks: tasks.map((t) => ({ name: t.name, stage: t.stage })),
-      categories: cats.map((c) => ({ name: c.name, amt: c.amt })).map((c) => ({
-        name: c.name, allocated: Number(onlyDigits(c.amt)) || 0,
+      categories: cats.map((c) => ({
+        name: c.name,
+        gov: Number(onlyDigits(c.gov)) || 0,
+        own: Number(onlyDigits(c.own)) || 0,
       })),
     };
     try {
@@ -237,21 +252,39 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
 
         <div className="card">
           <h2>4 · 예산 비목 <span className="hint">배정액을 넣으면 비목별 잔액이 표시됩니다</span></h2>
+          {/* 입력칸이 셋이라 무엇을 넣는 칸인지 머리글로 밝혀 둡니다.
+              배정액은 국고보조금 + 자기부담금이고, 합계는 서버가 냅니다. */}
+          <div className="dyn-row cat cat-head" aria-hidden="true">
+            <span>비목</span><span>국고보조금 (원)</span><span>자기부담금 (원)</span><span />
+          </div>
           <div id="rgCatRows">
             {cats.map((c, i) => (
               <div key={i} className="dyn-row cat">
                 <input placeholder="비목명 (예: 인건비)" className="c-nm" value={c.name}
                        onChange={(e) => setCats(cats.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
-                <input placeholder="배정액 (원)" inputMode="numeric" className="c-amt" value={c.amt}
+                <input placeholder="국고보조금" inputMode="numeric" className="c-amt" value={c.gov}
+                       aria-label="국고보조금 (원)"
                        onChange={(e) => setCats(cats.map((x, j) =>
-                         j === i ? { ...x, amt: commas(onlyDigits(e.target.value)) } : x))} />
+                         j === i ? { ...x, gov: commas(onlyDigits(e.target.value)) } : x))} />
+                <input placeholder="자기부담금" inputMode="numeric" className="c-amt" value={c.own}
+                       aria-label="자기부담금 (원)"
+                       onChange={(e) => setCats(cats.map((x, j) =>
+                         j === i ? { ...x, own: commas(onlyDigits(e.target.value)) } : x))} />
                 <button type="button" className="rm" aria-label="비목 삭제"
                         onClick={() => setCats(cats.filter((_, j) => j !== i))}>×</button>
               </div>
             ))}
           </div>
           <button type="button" className="btn-add"
-                  onClick={() => setCats([...cats, { name: "", amt: "" }])}>+ 비목 추가</button>
+                  onClick={() => setCats([...cats, { name: "", gov: "", own: "" }])}>+ 비목 추가</button>
+          {/* 비목을 채우면서 총액이 맞는지 바로 확인할 수 있게 합계를 보여 줍니다.
+              사람이 더하지 않아도 되고, 잘못 넣은 것을 그 자리에서 알아챕니다. */}
+          {비목합계.total > 0 && (
+            <p className="cat-sum">
+              국고 <b>{fmtMoney(비목합계.gov)}</b> · 자부담 <b>{fmtMoney(비목합계.own)}</b>
+              {" "}= 배정 합계 <b>{fmtMoney(비목합계.total)}</b>
+            </p>
+          )}
         </div>
 
         <div className={"form-err" + (err ? " on" : "")} id="rgErr">{err}</div>
