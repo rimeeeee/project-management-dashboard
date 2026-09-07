@@ -111,5 +111,5 @@
 
 ---
 
-<sub>현재 판 **0.2.0** · 바뀐 내용은 [CHANGELOG.md](CHANGELOG.md) 를 보세요.
+<sub>현재 판 **0.3.0** · 바뀐 내용은 [CHANGELOG.md](CHANGELOG.md) 를 보세요.
 서버에 올라간 판은 `http://서버주소:8080/api/health` 로 확인합니다.</sub>
