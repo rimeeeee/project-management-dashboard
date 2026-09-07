@@ -143,8 +143,12 @@ def load(reset: bool) -> int:
             cat_budgets = p.get("catBudgets") or {}
             for i, nm in enumerate(names):
                 proj.categories.append(
+                    # 시드에는 국고·자부담 구분이 없습니다. 합계가 어긋나면
+                    # 안 되므로 전액을 국고보조금으로 넣습니다.
                     ProjectCategory(
-                        name=nm, budget_amount=int(cat_budgets.get(nm) or 0), sort_order=i
+                        name=nm, budget_amount=int(cat_budgets.get(nm) or 0),
+                        budget_gov=int(cat_budgets.get(nm) or 0), budget_self=0,
+                        sort_order=i
                     )
                 )
 

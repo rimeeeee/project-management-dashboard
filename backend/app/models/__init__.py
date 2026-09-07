@@ -103,7 +103,13 @@ class ProjectCategory(Base):
     name: Mapped[str] = mapped_column(String(80), nullable=False)
     # 배정액(원). 0 은 '아직 안 넣음'이라는 뜻이고, 화면에서는 잔액 대신
     # '배정액 입력' 버튼이 나옵니다. 임의로 나눠 채우지 않습니다.
+    #
+    # 배정액은 국고보조금과 자기부담금으로 나뉘어 내려옵니다. 비목마다
+    # 비율이 달라서 비목별로 받습니다. budget_amount 는 늘 두 값의 합이고,
+    # 집행률·잔액 같은 화면 숫자는 예나 지금이나 이 합계만 씁니다.
     budget_amount: Mapped[int] = mapped_column(BigInteger, default=0)
+    budget_gov: Mapped[int] = mapped_column(BigInteger, default=0)    # 국고보조금
+    budget_self: Mapped[int] = mapped_column(BigInteger, default=0)   # 자기부담금
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     project: Mapped[Project] = relationship(back_populates="categories")

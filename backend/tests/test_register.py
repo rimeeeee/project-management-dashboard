@@ -15,7 +15,7 @@ def payload(**kw):
         "start": "2026-06-01", "end": "2027-05-31", "budget": 950_000_000, "cycle": "주간",
         "kpis": [{"name": "논문", "target": 3, "unit": "건"}],
         "tasks": [{"name": "착수보고"}],
-        "categories": [{"name": "인건비", "allocated": 400000000}],
+        "categories": [{"name": "인건비", "gov": 340_000_000, "own": 60_000_000}],
     }
     base.update(kw)
     return base
@@ -67,6 +67,22 @@ def test_지금_단계는_끝나지_않은_과제가_처음_나오는_단계다(
     assert 현재 == ["착수"]        # 아무것도 완료하지 않았으므로 첫 단계
 
 
+def test_비목_배정액을_국고와_자부담으로_나눠_받고_합계를_낸다(client):
+    """
+    사업비는 비목마다 국고보조금과 자기부담금 비율이 다릅니다. 그래서 비목별로
+    나눠 받습니다. 다만 화면에 보이는 배정액·집행률·잔액은 합계 하나만 씁니다.
+    """
+    d = client.post(P, json=payload(categories=[
+        {"name": "인건비", "gov": 340_000_000, "own": 60_000_000},
+        {"name": "여비", "gov": 30_000_000, "own": 0},
+    ])).json()
+
+    비목 = {c["name"]: c for c in d["categories"]}
+    assert 비목["인건비"]["allocated"] == 400_000_000      # 340 + 60
+    assert (비목["인건비"]["gov"], 비목["인건비"]["own"]) == (340_000_000, 60_000_000)
+    assert 비목["여비"]["allocated"] == 30_000_000
+
+
 def test_총사업비를_원_단위로_저장한다(client):
     assert client.post(P, json=payload(budget=75_000_000)).json()["budget"] == 75_000_000
     assert client.post(P, json=payload(budget=1_200_000_000)).json()["budget"] == 1_200_000_000
@@ -104,13 +120,13 @@ def test_목표가_0인_지표는_버린다(client):
 
 def test_같은_이름의_비목은_한_번만_넣는다(client):
     r = client.post(P, json=payload(categories=[
-        {"name": "인건비", "allocated": 100}, {"name": "인건비", "allocated": 200}]))
+        {"name": "인건비", "gov": 100}, {"name": "인건비", "gov": 200}]))
     assert [c["name"] for c in r.json()["categories"]] == ["인건비"]
 
 
 def test_배정액을_비우면_0으로_둔다(client):
     """임의로 나눠 채우지 않습니다 — 실제와 다른 잔액이 보이기 때문입니다."""
-    r = client.post(P, json=payload(categories=[{"name": "인건비", "allocated": 0}]))
+    r = client.post(P, json=payload(categories=[{"name": "인건비", "gov": 0, "own": 0}]))
     assert r.json()["categories"][0]["allocated"] == 0
 
 

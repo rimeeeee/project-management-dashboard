@@ -194,7 +194,11 @@ def detail(p: Project) -> dict[str, Any]:
         "stages": calc.STAGES,
         "stageNotes": [n.note for n in sorted(p.stage_notes, key=lambda x: x.stage_index)],
         "categories": [
-            {"name": c.name, "allocated": c.budget_amount} for c in p.categories
+            # allocated 는 gov + own 입니다. 화면 숫자는 이 합계를 쓰고,
+            # 나눈 둘은 사업을 고칠 때 입력칸을 다시 채우는 데 씁니다.
+            {"name": c.name, "allocated": c.budget_amount,
+             "gov": c.budget_gov, "own": c.budget_self}
+            for c in p.categories
         ],
         "catRows": cats,
         "tasks": [

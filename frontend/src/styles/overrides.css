@@ -238,3 +238,19 @@
 /* 접어 둔 사업은 눈에 덜 걸리게 */
 .nav-closed .nav-btn .nm{color:var(--muted)}
 .fold-row td{border-bottom:none; padding-top:4px; padding-bottom:4px}
+
+/* 비목 줄 — 배정액을 국고보조금·자기부담금으로 나눠 받으면서 칸이 하나
+   늘었습니다. 사업비가 두 몫으로 내려오고 비목마다 비율이 달라서입니다.
+   화면에 보이는 배정액·집행률·잔액은 두 값을 더한 합계만 씁니다. */
+.dyn-row.cat{grid-template-columns:minmax(0,1fr) 132px 132px 32px}
+@media(max-width:820px){
+  .dyn-row.cat{grid-template-columns:1fr 1fr; row-gap:6px}
+  .dyn-row.cat .rm{grid-column:2; justify-self:end}
+}
+.dyn-row.cat.cat-head{
+  font-size:13.2px; color:var(--muted); padding-bottom:2px;
+}
+.cat-sum{
+  margin-top:10px; font-size:14.4px; color:var(--ink-2);
+  font-variant-numeric:tabular-nums;
+}

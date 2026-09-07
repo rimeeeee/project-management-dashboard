@@ -168,5 +168,5 @@ export interface ProjectInput {
   cycle: string;
   kpis: { name: string; target: number; unit: string }[];
   tasks: { name: string }[];
-  categories: { name: string; allocated: number }[];
+  categories: { name: string; gov: number; own: number }[];   // allocated 는 서버가 합산
 }
