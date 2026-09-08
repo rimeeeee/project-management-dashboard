@@ -68,6 +68,10 @@ class Project(Base):
         back_populates="project", cascade="all, delete-orphan",
         order_by="ProjectCategory.sort_order",
     )
+    meetings: Mapped[list["Meeting"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan",
+        order_by="Meeting.met_on.desc()",
+    )
     tasks: Mapped[list["ProjectTask"]] = relationship(
         back_populates="project", cascade="all, delete-orphan",
         order_by="ProjectTask.sort_order",
@@ -424,3 +428,69 @@ class CollectorRun(Base):
 
     # 소스별 결과와 경고(인재원 응답 잘림 등)를 그대로 담습니다.
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+# ---------------------------------------------------------------------
+# 회의록
+# ---------------------------------------------------------------------
+class Meeting(Base):
+    """
+    회의록. 사업비 지출 증빙(감사·정산)에 씁니다.
+
+    사업에 매달아 둡니다. 회의록은 그 사업 예산을 쓴 근거이므로, 사업과
+    떨어지면 '어느 사업 회의비인지' 가 사라져 증빙 구실을 못 합니다.
+
+    금액을 적으면 그 사업의 집행 내역으로도 잡습니다. 회의록에서 한 번,
+    회차 입력에서 또 한 번 적으면 두 숫자가 어긋납니다.
+    """
+
+    __tablename__ = "meetings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+
+    title: Mapped[str] = mapped_column(Text, nullable=False)          # 회의명
+    met_on: Mapped[date] = mapped_column(Date, nullable=False)        # 일시
+    place: Mapped[str] = mapped_column(String(120), default="")       # 장소
+    # 참석자는 이름 목록입니다. 화면에서 칩으로 넣고 뺍니다.
+    attendees: Mapped[list] = mapped_column(JSON, default=list)
+    # 회의내용 bullet. 문단이 아니라 줄 단위라 목록으로 둡니다.
+    bullets: Mapped[list] = mapped_column(JSON, default=list)
+    # AI 에 준 추가 메모. 다시 생성할 때 무엇을 넣었는지 되짚어 볼 수 있게 남깁니다.
+    memo: Mapped[str] = mapped_column(Text, default="")
+    # 회의비(원). 0 은 '금액 없음' 입니다.
+    amount: Mapped[int] = mapped_column(BigInteger, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
+
+    project: Mapped[Project] = relationship(back_populates="meetings")
+    photos: Mapped[list["MeetingPhoto"]] = relationship(
+        back_populates="meeting", cascade="all, delete-orphan",
+        order_by="MeetingPhoto.sort_order",
+    )
+
+
+class MeetingPhoto(Base):
+    """
+    회의 사진. 파일 자체는 data/uploads/ 에 두고 여기에는 이름만 남깁니다.
+
+    사진을 데이터베이스에 넣으면 백업(pg_dump) 파일이 급격히 커지고,
+    되돌리는 데도 오래 걸립니다. 파일은 파일로 두는 편이 낫습니다.
+    """
+
+    __tablename__ = "meeting_photos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    meeting_id: Mapped[int] = mapped_column(
+        ForeignKey("meetings.id", ondelete="CASCADE"), index=True
+    )
+    stored_name: Mapped[str] = mapped_column(String(120), nullable=False)   # 저장된 파일 이름
+    original_name: Mapped[str] = mapped_column(String(255), default="")     # 올린 사람이 쓰던 이름
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    meeting: Mapped[Meeting] = relationship(back_populates="photos")

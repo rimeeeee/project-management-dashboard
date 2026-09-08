@@ -7,6 +7,8 @@ pydantic-settings
 argon2-cffi
 itsdangerous
 certifi
+python-docx        # 회의록 문서 만들기
+python-multipart   # 회의 사진 올리기 (파일 업로드)
 
 # 테스트용 — 서버 운영에는 쓰이지 않지만 파일을 하나로 두려고 여기 넣습니다.
 pytest

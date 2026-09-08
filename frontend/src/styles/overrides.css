@@ -254,3 +254,147 @@
   margin-top:10px; font-size:14.4px; color:var(--ink-2);
   font-variant-numeric:tabular-nums;
 }
+
+/* ══ 회의록 ══════════════════════════════════════════════════════
+   사업비 지출 증빙(감사·정산)에 쓰는 문서입니다. 사업 안에 두어
+   '어느 사업 회의비인지' 가 늘 붙어 다니게 했습니다.
+
+   색은 파스텔로 옅게만 씁니다. 그라데이션은 쓰지 않습니다 — 증빙
+   문서를 다루는 화면이라 차분한 편이 맞습니다. */
+
+/* 사업 안의 탭 (현황 / 회의록) */
+.proj-tabs{display:flex; gap:6px; margin:14px 0 4px; border-bottom:1px solid var(--line)}
+.proj-tab{
+  padding:9px 16px; border:0; background:transparent; cursor:pointer;
+  font-size:15.6px; font-weight:600; color:var(--muted);
+  border-bottom:2px solid transparent; margin-bottom:-1px;
+}
+.proj-tab:hover{color:var(--ink-2)}
+.proj-tab.on{color:var(--ink); border-bottom-color:#7FB3D5}
+
+/* 작성 | 목록 두 칸. 좁아지면 위아래로 쌓습니다. */
+.mt-grid{display:grid; grid-template-columns:1.4fr 1fr; gap:16px; align-items:start; margin-top:16px}
+@media(max-width:1100px){.mt-grid{grid-template-columns:1fr}}
+
+.mt-form{display:flex; flex-direction:column; gap:12px; margin-top:12px}
+.mt-form .f2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.mt-title-row{display:flex; gap:8px}
+.mt-title-row input{flex:1; min-width:0}
+
+/* 이름·제안 칩 */
+.chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.chip{
+  display:inline-flex; align-items:center; gap:5px;
+  background:#EAF2F8; color:#2C5F7C; border:1px solid #CFE2EE;
+  border-radius:99px; padding:4px 10px; font-size:14px;
+}
+.chip button{border:0; background:transparent; color:#5B8CA8; cursor:pointer; font-size:15px; line-height:1}
+.chip button:hover{color:var(--crit-ink)}
+.chips.sug .chip.pick{cursor:pointer; background:#F3F0FA; border-color:#DED6F0; color:#5B4B8A}
+.chips.sug .chip.pick:hover{background:#E9E3F6}
+
+/* 회의내용 */
+.mt-bullets{margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
+.mt-bullets-head{display:flex; align-items:center; gap:8px; margin-bottom:10px}
+.mt-bullets-head .hint{margin-right:auto}
+.btn-ai{
+  border:1px solid #CFE2EE; background:#EAF2F8; color:#2C5F7C;
+  border-radius:8px; padding:7px 14px; font-size:14.4px; font-weight:600; cursor:pointer;
+}
+.btn-ai:hover:not(:disabled){background:#DCEAF4}
+.btn-ai:disabled{opacity:.5; cursor:not-allowed}
+
+/* 줄을 눌러 그 자리에서 고칩니다 */
+.mt-bullet{display:flex; align-items:center; gap:8px; padding:3px 0}
+.mt-bullet .dot{color:var(--muted); width:10px}
+.mt-bullet input{
+  flex:1; border:1px solid transparent; background:transparent;
+  padding:6px 8px; border-radius:7px; font-size:15px; color:var(--ink);
+}
+.mt-bullet input:hover{background:var(--surface-2)}
+.mt-bullet input:focus{background:var(--surface); border-color:#CFE2EE; outline:none}
+.mt-bullet .rm{
+  border:0; background:transparent; color:var(--muted);
+  cursor:pointer; font-size:17px; line-height:1; padding:2px 6px;
+}
+.mt-bullet .rm:hover{color:var(--crit-ink)}
+
+/* 다시 생성했을 때 앞의 결과 — 좋았던 문장을 잃지 않게 옆에 둡니다 */
+.mt-prev{margin-top:12px; padding:12px; border:1px dashed var(--line-strong); border-radius:9px; background:var(--surface-2)}
+.mt-prev-head{display:flex; align-items:center; gap:8px; margin-bottom:8px}
+.mt-prev-head .hint{margin-right:auto}
+.mt-prev-row{display:flex; align-items:center; gap:8px; padding:4px 0; font-size:14.4px; color:var(--ink-2)}
+.mt-prev-row span{flex:1}
+
+/* 저장될 파일 이름 — 저장 전에 확인합니다 */
+.mt-file{
+  display:flex; align-items:center; gap:10px; margin-top:14px;
+  padding:10px 12px; background:#FAF7EE; border:1px solid #EDE3CC; border-radius:9px;
+}
+.mt-file .k{font-size:13.2px; color:#8A7443; white-space:nowrap}
+.mt-file .v{font-size:14.4px; color:#5F5230; font-weight:600; word-break:break-all}
+
+/* 사업 등록 화면의 [저장 / 삭제 / 취소] 와 같은 규격을 씁니다.
+   같은 자리의 단추가 화면마다 크기가 다르면 어수선해 보입니다.
+
+   .btn-primary 에는 width:100% 와 margin-top:16px 이 걸려 있습니다(원래
+   폼 맨 아래 한 줄로 놓이는 단추라서). 나란히 두려면 그것부터 풀어야
+   하는데, 안 풀면 취소 단추가 다음 줄로 밀리고 높이도 어긋납니다.
+
+   높이는 두 단추의 테두리·글자·안쪽 여백을 모두 같게 맞춰 냅니다.
+   .btn-primary 는 테두리가 없고 .btn-ghost 는 1px 라, 투명 테두리를
+   둘러 주지 않으면 딱 2px 낮아집니다. */
+.mt-actions{display:flex; gap:8px; margin-top:14px; align-items:stretch}
+.mt-actions .btn-primary,
+.mt-actions .btn-ghost{
+  width:auto;
+  margin-top:0;
+  min-width:150px;
+  padding:11px 16px;
+  border:1px solid transparent;
+  border-radius:9px;
+  font-size:16.8px;
+  line-height:1.5;
+}
+.mt-actions .btn-ghost{border-color:var(--line-strong)}
+.mt-actions .btn-primary:disabled{opacity:.45; cursor:not-allowed}
+
+/* 목록 */
+.mt-list{display:flex; flex-direction:column; gap:8px; margin-top:10px}
+.mt-item{border:1px solid var(--line); border-radius:9px; padding:11px 12px}
+.mt-item.on{border-color:#9CC6E0; background:#F7FBFD}
+.mt-item-top{display:flex; align-items:baseline; gap:8px}
+.mt-item-top b{font-size:15.6px; flex:1; min-width:0}
+.mt-amt{font-size:13.8px; color:#2C5F7C; background:#EAF2F8; border-radius:6px; padding:2px 7px; white-space:nowrap}
+.mt-item-sub{font-size:13.2px; color:var(--muted); margin-top:3px}
+.mt-item-acts{display:flex; gap:6px; margin-top:9px}
+.mt-item-acts .mini-btn{text-decoration:none}
+
+/* 회의 사진 — 문서 뒤에 원본 비율 그대로 들어갑니다.
+   저장된 회의록에만 붙일 수 있어(붙일 번호가 있어야 합니다) 저장 전에는
+   흐리게 두고 안내만 합니다. */
+.mt-photos{margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
+.mt-drop{
+  border:1.5px dashed var(--line-strong); border-radius:10px;
+  padding:18px; text-align:center; background:var(--surface-2);
+  transition:.12s;
+}
+.mt-drop label{color:var(--muted); font-size:14.4px; cursor:pointer; display:block}
+.mt-drop:hover:not(.off){border-color:#9CC6E0; background:#F7FBFD}
+.mt-drop.over{border-color:#7FB3D5; background:#EAF2F8}
+.mt-drop.off{opacity:.55}
+.mt-drop.off label{cursor:not-allowed}
+
+.mt-thumbs{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.mt-thumb{position:relative; width:104px}
+.mt-thumb img{
+  width:100%; height:78px; object-fit:cover;
+  border:1px solid var(--line); border-radius:8px; display:block;
+}
+.mt-thumb button{
+  position:absolute; top:-6px; right:-6px; width:22px; height:22px;
+  border:1px solid var(--line-strong); border-radius:50%;
+  background:var(--surface); color:var(--ink-2);
+  cursor:pointer; font-size:14px; line-height:1; padding:0;
+}
+.mt-thumb button:hover{background:var(--crit-bg); color:var(--crit-ink); border-color:var(--crit-ink)}

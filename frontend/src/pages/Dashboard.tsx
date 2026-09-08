@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Calendar, { calData } from "../components/Calendar";
 import InputPanel from "../components/InputPanel";
+import Meetings from "./Meetings";
 import { api } from "../lib/api";
 import { clamp, daysBetween, dots, fmtMoney, fmtWon, todayISO } from "../lib/format";
 import type { ProjectDetail, ProjectSummary } from "../lib/types";
@@ -27,6 +28,9 @@ const 폴더아이콘 = (
 export default function Dashboard({
   p, allProjects, onGo, onZoom, onProjectChange, onModal, onEdit,
 }: Props) {
+  /* 사업 안에서 '현황' 과 '회의록' 을 오갑니다. 회의록은 그 사업 예산을 쓴
+     근거라 사업 밖으로 빼면 어느 사업 회의비인지가 사라집니다. */
+  const [tab, setTab] = useState<"dash" | "meetings">("dash");
   const [ym, setYm] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [picked, setPicked] = useState("");
   const [inputOpen, setInputOpen] = useState(false);
@@ -145,6 +149,20 @@ export default function Dashboard({
         </div>
       </div>
 
+      <div className="proj-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === "dash"}
+                className={"proj-tab" + (tab === "dash" ? " on" : "")}
+                onClick={() => setTab("dash")}>📊 현황</button>
+        <button type="button" role="tab" aria-selected={tab === "meetings"}
+                className={"proj-tab" + (tab === "meetings" ? " on" : "")}
+                onClick={() => setTab("meetings")}>📝 회의록</button>
+      </div>
+
+      {tab === "meetings" && <Meetings projectId={p.id} onModal={onModal} />}
+
+      {/* 회의록 탭일 때는 현황을 아예 그리지 않습니다.
+          hidden 만 걸면 .dash-wrap 의 display:grid 에 밀려 그대로 보입니다. */}
+      {tab === "dash" && (
       <div className={"dash-wrap" + (inputOpen ? " open" : "")} id="dashWrap">
         <div className="dash-grid">
 
@@ -428,6 +446,7 @@ export default function Dashboard({
           onConflict={(msg, sub, onOverwrite) => onModal(msg, sub, onOverwrite)}
         />
       </div>
+      )}
     </section>
   );
 }
