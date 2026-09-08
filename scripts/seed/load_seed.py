@@ -52,6 +52,7 @@ SEED = Path(__file__).with_name("prototype-seed.json")
 
 # 프로토타입 DEFAULT_CATEGORIES 와 같습니다
 DEFAULT_CATEGORIES = ["인건비", "연구활동비", "장비·재료비", "여비", "회의·행사비", "외주용역비", "기타"]
+
 STAGE_COUNT = 5   # 기획·착수·진행·마무리·완료
 
 

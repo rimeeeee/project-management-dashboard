@@ -13,8 +13,16 @@ import { fmtWon } from "../lib/format";
 import type { Entry, PeriodOption, ProjectDetail } from "../lib/types";
 
 interface SpendRow {
-  amt: string;      // 화면에 보이는 그대로 (1,000,000)
+  amt: string;
   cat: string;
+  /* 실제 지출일. 월별 합산이 이 날짜로 묶입니다.
+
+     회차 날짜를 쓰지 않는 까닭은, 주간 회차가 달을 걸치면(8/31~9/6)
+     9월에 쓴 돈이 8월로 잡히기 때문입니다. 정산에서 묻는 것은 회차가
+     아니라 지출일입니다.
+
+     비워 두면 회차 날짜로 갑니다. */
+  on: string;
 }
 
 interface Props {
@@ -33,7 +41,7 @@ export default function InputPanel({
 }: Props) {
   const [periods, setPeriods] = useState<PeriodOption[]>([]);
   const [selected, setSelected] = useState("");
-  const [spends, setSpends] = useState<SpendRow[]>([{ amt: "", cat: "" }]);
+  const [spends, setSpends] = useState<SpendRow[]>([{ amt: "", cat: "", on: "" }]);
   const [kpi, setKpi] = useState<Record<string, string>>({});
   const [act, setAct] = useState("");
   const [issue, setIssue] = useState("");
@@ -69,12 +77,12 @@ export default function InputPanel({
   useEffect(() => {
     if (cur) {
       setSpends(cur.spends.length
-        ? cur.spends.map((s) => ({ amt: commas(String(s.amt)), cat: s.cat }))
-        : [{ amt: "", cat: "" }]);
+        ? cur.spends.map((s) => ({ amt: commas(String(s.amt)), cat: s.cat, on: s.on }))
+        : [{ amt: "", cat: "", on: "" }]);
       setKpi(Object.fromEntries(p.kpis.map((k) => [k.name, String(cur.kpi[k.name] ?? "")])));
       setAct(cur.act); setIssue(cur.issue); setPlan(cur.plan);
     } else {
-      setSpends([{ amt: "", cat: "" }]);
+      setSpends([{ amt: "", cat: "", on: "" }]);
       setKpi({}); setAct(""); setIssue(""); setPlan("");
     }
     setErr("");
@@ -102,14 +110,14 @@ export default function InputPanel({
 
   // ----- 저장 -----
   function collect(): SaveEntryBody | null {
-    const rows: { cat: string; amt: number }[] = [];
+    const rows: { cat: string; amt: number; on: string }[] = [];
     for (const r of spends) {
       if (r.amt === "") continue;
       const v = Number(r.amt.replace(/,/g, ""));
       if (Number.isNaN(v) || v < 0) {
         setErr("집행액은 0 이상의 숫자로 입력하세요."); return null;
       }
-      if (v > 0) rows.push({ cat: r.cat || catOptions[0] || "", amt: v });
+      if (v > 0) rows.push({ cat: r.cat || catOptions[0] || "", amt: v, on: r.on });
     }
 
     const kpiVals: Record<string, number> = {};
@@ -229,7 +237,9 @@ export default function InputPanel({
       </div>
 
       <div className="sec">
-        <div className="cap">3 · 집행액</div>
+        <div className="cap">3 · 집행액
+          <span className="hint">지출일을 비우면 회차 날짜로 잡힙니다</span>
+        </div>
         <div id="wkSpends">
           {spends.map((r, i) => (
             <div key={i} className="spend-row">
@@ -241,16 +251,22 @@ export default function InputPanel({
                         j === i ? { ...x, cat: e.target.value } : x))}>
                 {catOptions.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
+              {/* 안 적으면 회차 날짜로 갑니다. 매번 적게 하면 번거롭고,
+                  대개는 회차 안에서 쓴 돈이라 그 편이 맞습니다. */}
+              <input type="date" className="sp-on" value={r.on} aria-label="지출일"
+                     title="지출일 — 비우면 회차 날짜로 잡힙니다"
+                     onChange={(e) => setSpends(spends.map((x, j) =>
+                       j === i ? { ...x, on: e.target.value } : x))} />
               <button type="button" className="rm" aria-label="집행 항목 삭제"
                       onClick={() => {
                         const next = spends.filter((_, j) => j !== i);
-                        setSpends(next.length ? next : [{ amt: "", cat: "" }]);  // 최소 한 줄은 남깁니다
+                        setSpends(next.length ? next : [{ amt: "", cat: "", on: "" }]);  // 최소 한 줄은 남깁니다
                       }}>×</button>
             </div>
           ))}
         </div>
         <button type="button" className="btn-add"
-                onClick={() => setSpends([...spends, { amt: "", cat: "" }])}>+ 집행 항목 추가</button>
+                onClick={() => setSpends([...spends, { amt: "", cat: "", on: "" }])}>+ 집행 항목 추가</button>
         <div className="spend-sum" id="wkSpendSum">
           {sum.bad ? <>회차 합계 <b>—</b></>
                    : <>회차 합계 <b>{fmtWon(sum.total)}</b> 원</>}

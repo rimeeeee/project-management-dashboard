@@ -64,6 +64,8 @@ def list_periods(p: Project = Depends(get_project)) -> list[dict[str, Any]]:
 class SpendIn(BaseModel):
     cat: str = ""
     amt: int = 0
+    # 실제 지출일(YYYY-MM-DD). 비우면 회차 날짜로 봅니다.
+    on: str = ""
 
 
 class EntryIn(BaseModel):
@@ -100,6 +102,13 @@ def save_entry(
     for s in body.spends:
         if s.amt < 0:
             raise HTTPException(status_code=400, detail="집행액은 0 이상의 숫자로 입력하세요.")
+        # 지출일이 엉뚱하면 월별 합산이 통째로 어긋납니다. 여기서 걸러 냅니다.
+        if s.on.strip():
+            try:
+                date.fromisoformat(s.on.strip())
+            except ValueError:
+                raise HTTPException(
+                    status_code=400, detail="지출일을 확인하세요.") from None
     for name, v in body.kpi.items():
         if v < 0:
             raise HTTPException(status_code=400, detail=f"성과지표 '{name}' 값을 0 이상으로 입력하세요.")

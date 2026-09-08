@@ -1,7 +1,7 @@
 /* 사업 대시보드 — 프로토타입 renderDash() / renderHistory() / renderTodos() 를 옮겼습니다.
    4단계에서 입력 패널을 붙일 자리는 비워 두었습니다 (지금은 조회 전용). */
 import { useState } from "react";
-import Calendar, { calData } from "../components/Calendar";
+import Calendar, { calData, RUN_COLORS } from "../components/Calendar";
 import InputPanel from "../components/InputPanel";
 import Meetings from "./Meetings";
 import { api } from "../lib/api";
@@ -101,6 +101,11 @@ export default function Dashboard({
 
   const 배정있음 = p.catRows.some((c) => c.allocated > 0);
   const 최대 = Math.max(1, ...p.catRows.map((c) => Math.max(c.allocated, c.used)));
+
+  /* 월별 표에서 세목마다 같은 색을 씁니다. 막대와 표의 색이 같아야
+     어느 막대가 어느 줄인지 눈으로 잇습니다. */
+  const 세목색 = new Map(p.catRows.map((r, i) => [r.name, RUN_COLORS[i % RUN_COLORS.length]]));
+  const 월최대 = Math.max(1, ...p.monthly.months.map((m) => p.monthly.totals[m] ?? 0));
 
   const 남은할일 = p.todos.filter((t) => !t.done).length;
   const 정렬된할일 = p.todos.slice().sort((a, b) => {
@@ -285,14 +290,30 @@ export default function Dashboard({
               <div className="stat"><div className="k">잔액</div><div className="v" id="bdLeft">{fmtMoney(p.left)}</div></div>
             </div>
 
-            {/* 비목별 줄 — 오른쪽 숫자는 '잔액'입니다.
-                배정액을 넣은 비목은 (배정액 − 사용액), 안 넣은 비목은 잔액을 알 수 없으므로
-                배정액을 넣으러 갈 수 있는 자리를 둡니다. */}
+            {/* 계정과목 — 사업마다 하나입니다. 이 사업에서 쓴 돈은 모두
+                이 과목으로 잡히므로, 위의 집행액이 곧 계정과목 집행액입니다.
+                그래서 따로 합계를 또 적지 않고 이름만 밝혀 둡니다. */}
+            {p.account ? (
+              <div className="acct-line">
+                <span className="k">계정과목</span>
+                <span className="v">{p.account}</span>
+              </div>
+            ) : (
+              <button type="button" className="acct-line none" onClick={onEdit}
+                      title="사업 수정에서 계정과목을 넣을 수 있습니다">
+                <span className="k">계정과목</span>
+                <span className="v link">아직 정하지 않았습니다</span>
+              </button>
+            )}
+
+            {/* 세목별 줄 — 오른쪽 숫자는 '잔액'입니다.
+                편성액을 넣은 세목은 (편성액 − 집행액), 안 넣은 세목은 잔액을
+                알 수 없으므로 편성액을 넣으러 갈 수 있는 자리를 둡니다. */}
             <div className="cat-rows" id="bdCats">
               {p.catRows.length ? (
                 <>
                   <div className="cat-head">
-                    비목별 남은 금액{배정있음 ? "" : " · 배정액을 넣어야 계산됩니다"}
+                    세목별 남은 금액{배정있음 ? "" : " · 편성액을 넣어야 계산됩니다"}
                   </div>
                   {p.catRows.map((c) => {
                     const 기준 = c.allocated > 0 ? c.allocated : 최대;
@@ -300,29 +321,34 @@ export default function Dashboard({
                     const 초과 = c.allocated > 0 && c.used > c.allocated;
                     const 잔액 = c.allocated - c.used;
                     const 툴팁 = c.allocated > 0
-                      ? `사용 ${fmtWon(c.used)}원 / 배정 ${fmtWon(c.allocated)}원`
-                      : `사용 ${fmtWon(c.used)}원 · 배정액 미입력`;
+                      ? `집행 ${fmtWon(c.used)}원 / 편성 ${fmtWon(c.allocated)}원`
+                      : `집행 ${fmtWon(c.used)}원 · 편성액 미입력`;
                     return (
-                      <div key={c.name} className="cat-row">
-                        <span className="nm" title={c.name}>{c.name}</span>
-                        <span className={"bar" + (초과 ? " over" : "")} role="button" tabIndex={0}
-                              onClick={(e) => e.currentTarget.classList.toggle("on")}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault();
-                                  e.currentTarget.classList.toggle("on");
-                                }
-                              }}>
-                          <i style={{ width: `${폭}%` }} /><span className="tip">{툴팁}</span>
-                        </span>
-                        {c.allocated > 0 ? (
-                          <span className="v" style={초과 ? { color: "var(--crit-ink)" } : undefined}>
-                            {fmtMoney(잔액)}
+                      <div key={c.name} className="cat-line">
+                        <div className="cat-row">
+                          <span className="nm" title={c.name}>{c.name}</span>
+                          <span className={"bar" + (초과 ? " over" : "")} role="button" tabIndex={0}
+                                onClick={(e) => e.currentTarget.classList.toggle("on")}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.toggle("on");
+                                  }
+                                }}>
+                            <i style={{ width: `${폭}%` }} /><span className="tip">{툴팁}</span>
                           </span>
-                        ) : (
-                          <button type="button" className="v none link" onClick={onEdit}
-                                  title="배정액을 넣으면 남은 금액이 표시됩니다">배정액 입력</button>
-                        )}
+                          {c.allocated > 0 ? (
+                            <span className="v" style={초과 ? { color: "var(--crit-ink)" } : undefined}>
+                              {fmtMoney(잔액)}
+                            </span>
+                          ) : (
+                            <button type="button" className="v none link" onClick={onEdit}
+                                    title="편성액을 넣으면 남은 금액이 표시됩니다">편성액 입력</button>
+                          )}
+                        </div>
+                        {/* 산출 근거 — 편성액을 어떻게 냈는지 적어 둔 쪽지.
+                            다음에 금액을 고칠 때 여기를 보고 씁니다. */}
+                        {c.basis && <div className="cat-basis" title={c.basis}>{c.basis}</div>}
                       </div>
                     );
                   })}
@@ -330,6 +356,109 @@ export default function Dashboard({
               ) : <div className="empty">집행 내역 없음</div>}
             </div>
           </div>
+
+          {/* 월별 집행 — 언제 얼마를 썼는지.
+
+              위는 달마다 얼마를 썼는지 한눈에 보는 막대이고, 아래는 정산에
+              그대로 옮겨 적을 수 있는 숫자 표입니다. 둘 다 두는 까닭은,
+              막대만으로는 정확한 금액을 못 읽고 표만으로는 어느 달에 몰렸는지
+              눈에 안 들어오기 때문입니다.
+
+              막대와 표의 계정과목 색은 같습니다. */}
+          {p.monthly.months.length > 0 && (
+            <div className="card span2 mo-card">
+              <h2>월별 집행
+                <span className="hint">
+                  지출일 기준 · 누계 {fmtMoney(p.monthly.grand)}
+                </span>
+              </h2>
+
+              {p.monthly.grand === 0 ? (
+                <div className="empty">아직 집행 내역이 없습니다.</div>
+              ) : (
+                <>
+                  <div className="mo-legend">
+                    {p.monthly.rows.map((r) => (
+                      <span key={r.cat}>
+                        <i style={{ background: 세목색.get(r.cat) }} aria-hidden="true" />
+                        {r.cat}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* 달마다 막대 하나. 계정과목별로 쌓여 있습니다. */}
+                  <div className="mo-bars" role="img"
+                       aria-label={`월별 집행액. 누계 ${fmtWon(p.monthly.grand)}원.`}>
+                    {p.monthly.months.map((m) => {
+                      const 합 = p.monthly.totals[m] ?? 0;
+                      const 높이 = Math.round((합 / 월최대) * 100);
+                      return (
+                        <div key={m} className="mo-col" title={`${m.slice(5)}월 ${fmtWon(합)}원`}>
+                          <div className="mo-stack">
+                            <div className="mo-fill" style={{ height: `${높이}%` }}>
+                              {p.monthly.rows.map((r) => {
+                                const v = r.byMonth[m] ?? 0;
+                                if (v === 0) return null;
+                                return (
+                                  <i key={r.cat}
+                                     style={{
+                                       height: `${(v / 합) * 100}%`,
+                                       background: 세목색.get(r.cat),
+                                     }}
+                                     title={`${r.cat} ${fmtWon(v)}원`} />
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div className="mo-x">{Number(m.slice(5))}월</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* 표는 가로로 넘칩니다. 달이 열두 칸을 넘으면 접히는 대신
+                      옆으로 밀리게 두어야 숫자가 겹치지 않습니다. */}
+                  <div className="tbl-wrap mo-wrap">
+                    <table className="tbl mo-tbl">
+                      <thead><tr>
+                        <th className="mo-acct">세목</th>
+                        {p.monthly.months.map((m) => (
+                          <th key={m} className="num">{Number(m.slice(5))}월</th>
+                        ))}
+                        <th className="num mo-tot">합계</th>
+                      </tr></thead>
+                      <tbody>
+                        {p.monthly.rows.map((r) => (
+                          <tr key={r.cat}>
+                            <td className="mo-acct">
+                              <i className="dot" style={{ background: 세목색.get(r.cat) }}
+                                 aria-hidden="true" />
+                              {r.cat}
+                            </td>
+                            {p.monthly.months.map((m) => (
+                              <td key={m} className="num">
+                                {r.byMonth[m] ? fmtWon(r.byMonth[m]) : <span className="zero">·</span>}
+                              </td>
+                            ))}
+                            <td className="num mo-tot">{fmtWon(r.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot><tr>
+                        <td className="mo-acct">합계</td>
+                        {p.monthly.months.map((m) => (
+                          <td key={m} className="num">
+                            {p.monthly.totals[m] ? fmtWon(p.monthly.totals[m]) : <span className="zero">·</span>}
+                          </td>
+                        ))}
+                        <td className="num mo-tot">{fmtWon(p.monthly.grand)}</td>
+                      </tr></tfoot>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="card span2">
             <div className="band">

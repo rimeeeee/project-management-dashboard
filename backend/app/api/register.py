@@ -51,6 +51,8 @@ class TaskIn(BaseModel):
 
 
 class CategoryIn(BaseModel):
+    # 편성액 산출 근거 쪽지. 계산에는 쓰지 않습니다.
+    basis: str = ""
     name: str = ""
     # 배정액은 국고보조금과 자기부담금으로 나뉘어 내려옵니다.
     # allocated 는 두 값의 합이고, 서버가 냅니다.
@@ -63,6 +65,8 @@ class ProjectIn(BaseModel):
     name: str = ""
     agency: str = ""
     folderUrl: str = ""
+    # 계정과목. 사업마다 하나입니다.
+    account: str = ""
     start: str = ""
     end: str = ""
     budget: int = 0            # 원 단위
@@ -76,6 +80,7 @@ class Cleaned(BaseModel):
     name: str
     agency: str
     folder_url: str
+    account: str
     start: date
     end: date
     budget: int
@@ -133,11 +138,14 @@ def clean(body: ProjectIn) -> Cleaned:
             continue
         seen_cat.add(nm)
         gov, own = max(0, c.gov), max(0, c.own)
-        cats.append(CategoryIn(name=nm, gov=gov, own=own, allocated=gov + own))
+        cats.append(CategoryIn(
+            name=nm, gov=gov, own=own, allocated=gov + own,
+            basis=c.basis.strip()[:500],
+        ))
 
     # 확인 순서도 프로토타입과 같습니다 (비목 → 추진과제 → 성과지표)
     if not cats:
-        raise bad("예산 비목을 1개 이상 입력하세요.")
+        raise bad("예산 세목을 1개 이상 입력하세요.")
     if not tasks:
         raise bad("추진과제를 1개 이상 입력하세요.")
     if not kpis:
@@ -145,6 +153,7 @@ def clean(body: ProjectIn) -> Cleaned:
 
     return Cleaned(
         name=name, agency=body.agency.strip(), folder_url=body.folderUrl.strip(),
+        account=" ".join(body.account.split()).strip()[:80],
         start=start, end=end, budget=budget, cycle=body.cycle,
         kpis=kpis, tasks=tasks, categories=cats,
     )
@@ -152,12 +161,13 @@ def clean(body: ProjectIn) -> Cleaned:
 
 def _set_basics(p: Project, c: Cleaned) -> None:
     p.name, p.agency, p.folder_url = c.name, c.agency, c.folder_url
+    p.account = c.account
     p.start, p.end, p.budget, p.cycle = c.start, c.end, c.budget, c.cycle
 
 
 def _set_lists(db: Session, p: Project, c: Cleaned, done_by_name: dict[str, bool]) -> None:
     """
-    지표 · 추진과제 · 비목을 지우고 다시 넣습니다.
+    지표 · 추진과제 · 세목을 지우고 다시 넣습니다.
 
     지우고 넣는 사이에 flush() 가 없으면, 지우는 문이 나가기 전에 넣는 문이 먼저
     나가서 같은 이름이 잠깐 두 개가 되어 UNIQUE 제약에 걸립니다.
@@ -179,7 +189,8 @@ def _set_lists(db: Session, p: Project, c: Cleaned, done_by_name: dict[str, bool
     )
     p.categories.extend(
         ProjectCategory(name=x.name, budget_amount=x.allocated,
-                        budget_gov=x.gov, budget_self=x.own, sort_order=i)
+                        budget_gov=x.gov, budget_self=x.own,
+                        basis=x.basis, sort_order=i)
         for i, x in enumerate(c.categories)
     )
 

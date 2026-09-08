@@ -67,9 +67,9 @@ def test_지금_단계는_끝나지_않은_과제가_처음_나오는_단계다(
     assert 현재 == ["착수"]        # 아무것도 완료하지 않았으므로 첫 단계
 
 
-def test_비목_배정액을_국고와_자부담으로_나눠_받고_합계를_낸다(client):
+def test_세목_편성액을_국고와_자부담으로_나눠_받고_합계를_낸다(client):
     """
-    사업비는 비목마다 국고보조금과 자기부담금 비율이 다릅니다. 그래서 비목별로
+    사업비는 세목마다 국고보조금과 자기부담금 비율이 다릅니다. 그래서 세목별로
     나눠 받습니다. 다만 화면에 보이는 배정액·집행률·잔액은 합계 하나만 씁니다.
     """
     d = client.post(P, json=payload(categories=[
@@ -77,10 +77,10 @@ def test_비목_배정액을_국고와_자부담으로_나눠_받고_합계를_�
         {"name": "여비", "gov": 30_000_000, "own": 0},
     ])).json()
 
-    비목 = {c["name"]: c for c in d["categories"]}
-    assert 비목["인건비"]["allocated"] == 400_000_000      # 340 + 60
-    assert (비목["인건비"]["gov"], 비목["인건비"]["own"]) == (340_000_000, 60_000_000)
-    assert 비목["여비"]["allocated"] == 30_000_000
+    세목 = {c["name"]: c for c in d["categories"]}
+    assert 세목["인건비"]["allocated"] == 400_000_000      # 340 + 60
+    assert (세목["인건비"]["gov"], 세목["인건비"]["own"]) == (340_000_000, 60_000_000)
+    assert 세목["여비"]["allocated"] == 30_000_000
 
 
 def test_총사업비를_원_단위로_저장한다(client):
@@ -107,8 +107,8 @@ def test_총사업비가_0이면_막는다(client):
     assert "총 사업비는 0보다 큰" in r.json()["detail"]
 
 
-def test_비목_추진과제_성과지표는_각각_하나_이상(client):
-    assert client.post(P, json=payload(categories=[])).json()["detail"] == "예산 비목을 1개 이상 입력하세요."
+def test_세목_추진과제_성과지표는_각각_하나_이상(client):
+    assert client.post(P, json=payload(categories=[])).json()["detail"] == "예산 세목을 1개 이상 입력하세요."
     assert client.post(P, json=payload(tasks=[])).json()["detail"] == "추진과제를 1개 이상 입력하세요."
     assert client.post(P, json=payload(kpis=[])).json()["detail"] == "성과지표를 1개 이상 입력하세요."
 
@@ -118,7 +118,7 @@ def test_목표가_0인_지표는_버린다(client):
     assert [k["name"] for k in r.json()["kpis"]] == ["논문"]
 
 
-def test_같은_이름의_비목은_한_번만_넣는다(client):
+def test_같은_이름의_세목은_한_번만_넣는다(client):
     r = client.post(P, json=payload(categories=[
         {"name": "인건비", "gov": 100}, {"name": "인건비", "gov": 200}]))
     assert [c["name"] for c in r.json()["categories"]] == ["인건비"]

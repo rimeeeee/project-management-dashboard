@@ -36,8 +36,17 @@ export interface ProjectSummary {
 }
 
 export interface Spend {
-  cat: string;
+  cat: string;               // 세목 이름
   amt: number;
+  on: string;                // 지출일 YYYY-MM-DD. 월별 합산의 기준입니다
+}
+
+/** 월별 × 세목 집행액. months 는 "YYYY-MM" 이 이어진 목록입니다. */
+export interface Monthly {
+  months: string[];
+  rows: { cat: string; byMonth: Record<string, number>; total: number }[];
+  totals: Record<string, number>;
+  grand: number;
 }
 
 export interface Entry {
@@ -66,10 +75,21 @@ export interface Todo {
   done: boolean;
 }
 
+/* 세목 한 줄.
+
+     사업 (계정과목: 인건비)
+       └ 세목 (연구수당 · 4대보험)
+           └ 집행 내역
+
+   계정과목은 사업마다 하나라 ProjectDetail.account 에 있습니다. */
 export interface CatRow {
   name: string;
   used: number;
   allocated: number;
+  gov: number;
+  own: number;
+  /** 편성액 산출 근거 쪽지. "단가 2,000,000 × 5명 × 8개월" 처럼 적습니다. */
+  basis: string;
 }
 
 export interface Kpi {
@@ -86,8 +106,13 @@ export interface ProjectDetail extends ProjectSummary {
   stageNotes: string[];
   /* allocated 는 gov + own 입니다. 화면 숫자는 이 합계를 쓰고,
      나눈 둘은 사업을 고칠 때 입력칸을 다시 채우는 데 씁니다. */
-  categories: { name: string; allocated: number; gov: number; own: number }[];
+  categories: {
+    name: string; allocated: number; gov: number; own: number; basis: string;
+  }[];
   catRows: CatRow[];
+  /** 계정과목. 사업마다 하나이고, 이 사업에서 쓴 돈은 모두 이 과목으로 잡힙니다. */
+  account: string;
+  monthly: Monthly;
   tasks: { name: string; done: boolean; stage: number }[];
   /* 단계별 완료 집계. current 는 '아직 끝나지 않은 과제가 처음 나오는 단계' 로
      서버가 계산합니다(손으로 고르지 않습니다). */

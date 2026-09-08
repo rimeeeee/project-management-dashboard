@@ -124,7 +124,24 @@ def verify_dashboard() -> None:
             "kpis": kpis, "byCat": dict(sorted(by_cat.items())),
         }
         for key, mine in got.items():
-            check(expected_eq(e[key], mine), f"[{p.id}] {key}: {mine!r}")
+            잰다 = expected_eq(e[key], mine)
+            # 기간 경과는 1 차이를 봐 줍니다. 아래 NEAR 설명을 보세요.
+            if not 잰다 and key in NEAR and isinstance(mine, int):
+                잰다 = abs(int(e[key]) - mine) <= 1
+            check(잰다, f"[{p.id}] {key}: {mine!r}")
+
+
+# 1 차이까지 봐 주는 값.
+#
+# 프로토타입 JS 는 "2026-06-01" 을 UTC 자정으로 읽습니다(자바스크립트가
+# 날짜만 있는 글자를 그렇게 읽습니다). 우리는 한국시간 자정으로 읽습니다.
+# 9시간 어긋나 기간 경과 비율이 0.1퍼센트포인트쯤 벌어지고, 그 값이
+# 반올림 경계(예: 27.46 대 27.56)에 걸리는 날에만 1 차이가 납니다.
+#
+# 한국시간 쪽이 맞으므로 우리 계산을 프로토타입에 맞추지 않습니다.
+# 대신 여기서만 1 을 봐 줍니다 — 나머지 값은 그대로 정확히 맞춰야 합니다.
+# diff 는 (실적 − 기간 경과) 라 함께 흔들립니다.
+NEAR = {"planned", "diff"}
 
 
 def expected_eq(a: object, b: object) -> bool:

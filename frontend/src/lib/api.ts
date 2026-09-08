@@ -150,7 +150,7 @@ export const api = {
 };
 
 export interface SaveEntryBody {
-  spends: { cat: string; amt: number }[];
+  spends: { cat: string; amt: number; on: string }[];
   kpi: Record<string, number>;
   act: string;
   issue: string;
@@ -168,5 +168,8 @@ export interface ProjectInput {
   cycle: string;
   kpis: { name: string; target: number; unit: string }[];
   tasks: { name: string }[];
-  categories: { name: string; gov: number; own: number }[];   // allocated 는 서버가 합산
+  /** 계정과목. 사업마다 하나입니다. */
+  account: string;
+  // allocated 는 서버가 합산합니다. basis 는 편성액 산출 근거 쪽지입니다.
+  categories: { name: string; gov: number; own: number; basis: string }[];
 }

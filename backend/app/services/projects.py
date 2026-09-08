@@ -150,7 +150,13 @@ def _entry_out(p: Project, e: ReportEntry) -> dict[str, Any]:
         "date": _iso(e.entry_date),
         "periodLabel": per.label,
         "periodFull": per.full,
-        "spends": [{"cat": s.category, "amt": s.amount} for s in e.spends],
+        "spends": [
+            {"cat": s.category, "amt": s.amount,
+             # 지출일이 없는 것은 이 칸이 생기기 전에 넣은 내역입니다.
+             # 회차 날짜로 봅니다.
+             "on": _iso(s.spend_on or e.entry_date)}
+            for s in e.spends
+        ],
         "spendTotal": entry_total(e),
         "catSummary": cat_summary(e),
         "kpi": {kv.kpi_name: kv.value for kv in e.kpi_values},
@@ -162,25 +168,93 @@ def _entry_out(p: Project, e: ReportEntry) -> dict[str, Any]:
     }
 
 
+def _month(d) -> str:
+    return f"{d.year:04d}-{d.month:02d}"
+
+
+def _cat_rows(p: Project, entries) -> list[dict[str, Any]]:
+    """
+    세목별 편성액·집행액. 산출 근거 쪽지도 함께 냅니다.
+
+    계정과목은 사업마다 하나뿐이라 여기서 묶지 않습니다. 이 사업에서 쓴
+    돈은 모두 그 한 과목으로 잡히고, 그 합계는 spent 입니다.
+    """
+    쓴돈: dict[str, int] = {}
+    for e in entries:
+        for s in e.spends:
+            쓴돈[s.category] = 쓴돈.get(s.category, 0) + s.amount
+
+    행 = [
+        {"name": c.name, "allocated": c.budget_amount,
+         "gov": c.budget_gov, "own": c.budget_self,
+         "used": 쓴돈.get(c.name, 0), "basis": c.basis}
+        for c in sorted(p.categories, key=lambda x: (x.sort_order, x.id))
+    ]
+    있는것 = {c.name for c in p.categories}
+    # 사업 등록에서 지운 세목이라도 이미 쓴 돈이 있으면 보여 줍니다.
+    # 감추면 합계가 맞지 않아 '어디서 새는 돈' 처럼 보입니다.
+    행 += [
+        {"name": 이름, "allocated": 0, "gov": 0, "own": 0, "used": 액, "basis": ""}
+        for 이름, 액 in 쓴돈.items() if 이름 not in 있는것
+    ]
+
+    행 = [r for r in 행 if r["allocated"] > 0 or r["used"] > 0]
+    # 프로토타입과 같은 정렬: 편성액(없으면 집행액)이 큰 것부터
+    행.sort(key=lambda r: r["allocated"] or r["used"], reverse=True)
+    return 행
+
+
+def _monthly(p: Project, entries) -> dict[str, Any]:
+    """
+    월별 × 세목 집행액.
+
+    달은 사업 시작 달부터 '이번 달' 과 '마지막 지출이 있는 달' 중 늦은
+    쪽까지 이어서 냅니다. 사업 끝나는 달을 넘기지는 않습니다.
+    아직 오지 않은 달을 스무 칸씩 늘어놓아 봐야 읽기만 어렵습니다.
+    중간에 안 쓴 달은 0 으로 남겨 둡니다 — 빈 달도 알아야 할 사실입니다.
+    """
+    칸: dict[tuple[str, str], int] = {}
+    지출달: list[str] = []
+    for e in entries:
+        for s in e.spends:
+            달 = _month(s.spend_on or e.entry_date)
+            칸[(s.category, 달)] = 칸.get((s.category, 달), 0) + s.amount
+            지출달.append(달)
+
+    if not p.start:
+        return {"months": [], "rows": [], "totals": {}, "grand": 0}
+
+    오늘 = calc.today()
+    끝 = _month(p.end) if p.end else _month(오늘)
+    마지막 = max([_month(오늘), *지출달]) if 지출달 else _month(오늘)
+    마지막 = min(마지막, 끝)
+
+    달들: list[str] = []
+    해, 월 = p.start.year, p.start.month
+    while f"{해:04d}-{월:02d}" <= 마지막 and len(달들) < 60:
+        달들.append(f"{해:04d}-{월:02d}")
+        월 += 1
+        if 월 > 12:
+            해, 월 = 해 + 1, 1
+    # 사업이 아직 시작 전이면 시작 달 하나만 둡니다(표가 비면 뜻이 없습니다).
+    if not 달들:
+        달들 = [_month(p.start)]
+
+    행 = []
+    for r in _cat_rows(p, entries):
+        이름 = r["name"]
+        by = {m: 칸.get((이름, m), 0) for m in 달들}
+        if sum(by.values()) == 0:
+            continue          # 한 푼도 안 쓴 세목은 표를 늘리기만 합니다
+        행.append({"cat": 이름, "byMonth": by, "total": sum(by.values())})
+
+    합 = {m: sum(r["byMonth"][m] for r in 행) for m in 달들}
+    return {"months": 달들, "rows": 행, "totals": 합, "grand": sum(합.values())}
+
+
 def detail(p: Project) -> dict[str, Any]:
     """사업 대시보드 한 화면에 필요한 것 전부"""
     entries = sorted(p.entries, key=lambda e: e.entry_date)
-
-    # 비목별 사용액. 사업 등록에서 지운 비목이라도 이미 쓴 돈이 있으면 보여 줘야 합니다.
-    by_cat: dict[str, int] = {}
-    for e in entries:
-        for s in e.spends:
-            by_cat[s.category] = by_cat.get(s.category, 0) + s.amount
-
-    allocated = {c.name: c.budget_amount for c in p.categories}
-    names = list(allocated.keys()) + [n for n in by_cat if n not in allocated]
-    cats = [
-        {"name": n, "used": by_cat.get(n, 0), "allocated": allocated.get(n, 0)}
-        for n in names
-    ]
-    # 프로토타입과 같은 정렬: 배정액(없으면 사용액)이 큰 것부터
-    cats = [c for c in cats if c["used"] > 0 or c["allocated"] > 0]
-    cats.sort(key=lambda c: c["allocated"] or c["used"], reverse=True)
 
     kpis = []
     for k in p.kpis:
@@ -193,14 +267,20 @@ def detail(p: Project) -> dict[str, Any]:
         "stage": p.stage,
         "stages": calc.STAGES,
         "stageNotes": [n.note for n in sorted(p.stage_notes, key=lambda x: x.stage_index)],
+        # 계정과목은 사업마다 하나입니다. 이 사업에서 쓴 돈은 모두
+        # 이 과목으로 잡히고, 그 합계가 spent 입니다.
+        "account": p.account,
         "categories": [
             # allocated 는 gov + own 입니다. 화면 숫자는 이 합계를 쓰고,
             # 나눈 둘은 사업을 고칠 때 입력칸을 다시 채우는 데 씁니다.
             {"name": c.name, "allocated": c.budget_amount,
-             "gov": c.budget_gov, "own": c.budget_self}
+             "gov": c.budget_gov, "own": c.budget_self, "basis": c.basis}
             for c in p.categories
         ],
-        "catRows": cats,
+        # 세목별 편성액·집행액·산출 근거.
+        "catRows": _cat_rows(p, entries),
+        # 월별 × 세목 집행액.
+        "monthly": _monthly(p, entries),
         "tasks": [
             {"name": t.name, "done": t.done, "stage": t.stage}
             for t in sorted(p.tasks, key=lambda x: (x.sort_order, x.id))

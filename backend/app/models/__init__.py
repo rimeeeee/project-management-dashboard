@@ -53,6 +53,9 @@ class Project(Base):
 
     cycle: Mapped[str] = mapped_column(String(10), default="주간")   # 주간/격주/월간
     folder_url: Mapped[str] = mapped_column(Text, default="")
+    # 계정과목. 사업마다 하나입니다. 이 사업에서 쓴 돈은 모두 이 과목으로
+    # 잡힙니다. 비워 두면 계정과목을 아직 안 정한 사업입니다.
+    account: Mapped[str] = mapped_column(String(80), default="")
     stage: Mapped[int] = mapped_column(Integer, default=0)           # 0~4
 
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
@@ -95,7 +98,16 @@ class Project(Base):
 
 
 class ProjectCategory(Base):
-    """비목과 배정액. 비목은 사업마다 다릅니다."""
+    """
+    세목과 편성액. 세목은 사업마다 다릅니다.
+
+    계정과목은 사업마다 하나뿐이라 Project.account 에 있습니다. 여기에
+    두면 같은 값을 세목 수만큼 되풀이해 넣게 됩니다.
+
+        사업 (계정과목: 인건비)
+          └ 세목 (연구수당 · 4대보험)
+              └ 집행 내역
+    """
 
     __tablename__ = "project_categories"
     __table_args__ = (UniqueConstraint("project_id", "name", name="uq_category_per_project"),)
@@ -105,6 +117,9 @@ class ProjectCategory(Base):
         ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
     name: Mapped[str] = mapped_column(String(80), nullable=False)
+    # 편성액 산출 근거. "단가 2,000,000 × 5명 × 8개월" 처럼 적어 둡니다.
+    # 계산에는 쓰지 않습니다 — 다음에 금액을 넣을 때 보고 쓰는 쪽지입니다.
+    basis: Mapped[str] = mapped_column(Text, default="")
     # 배정액(원). 0 은 '아직 안 넣음'이라는 뜻이고, 화면에서는 잔액 대신
     # '배정액 입력' 버튼이 나옵니다. 임의로 나눠 채우지 않습니다.
     #
@@ -278,6 +293,15 @@ class EntrySpend(Base):
     )
     category: Mapped[str] = mapped_column(String(80), nullable=False)
     amount: Mapped[int] = mapped_column(BigInteger, nullable=False)   # 원 단위
+    # 실제로 지출한 날. 월별 합산은 이 날짜로 묶습니다.
+    #
+    # 회차 날짜를 쓰지 않는 까닭은, 주간 회차가 달을 걸치면(8/31~9/6)
+    # 9월에 쓴 돈이 8월로 잡히기 때문입니다. 정산에서 묻는 것은 회차가
+    # 아니라 지출일입니다.
+    #
+    # 비어 있으면 회차 날짜로 봅니다. 이 칸이 생기기 전에 넣은 내역이
+    # 그렇습니다.
+    spend_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     entry: Mapped[ReportEntry] = relationship(back_populates="spends")

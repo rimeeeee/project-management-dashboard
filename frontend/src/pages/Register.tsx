@@ -16,14 +16,19 @@ const CYCLE_HELP: Record<string, string> = {
   "월간": "매월 1일~말일 단위로 회차를 계산합니다.",
 };
 
-// 새 사업을 만들 때 기본으로 채워지는 비목 — 등록 화면에서 바꿀 수 있습니다
+// 새 사업을 만들 때 기본으로 채워지는 세목 — 등록 화면에서 바꿀 수 있습니다
 const DEFAULT_CATEGORIES = ["인건비", "연구활동비", "장비·재료비", "여비", "회의·행사비", "외주용역비", "기타"];
 
 interface KpiRow { name: string; target: string; unit: string }
-/* 비목 한 줄. 배정액은 국고보조금과 자기부담금으로 나뉘어 내려오고,
-   비목마다 비율이 달라 비목별로 받습니다. 화면에 보이는 배정액·집행률은
-   두 값을 더한 합계 하나만 씁니다. */
-interface CatRow { name: string; gov: string; own: string }
+/* 세목 한 줄. 편성액은 국고보조금과 자기부담금으로 나뉘어 내려오고,
+   세목마다 비율이 달라 세목별로 받습니다. 화면에 보이는 편성액·집행률은
+   두 값을 더한 합계 하나만 씁니다.
+
+   계정과목은 사업마다 하나라 여기가 아니라 위쪽에서 한 번만 받습니다.
+
+   basis 는 편성액을 어떻게 냈는지 적어 두는 쪽지입니다. 계산에는 쓰지
+   않습니다 — 다음에 금액을 넣을 때 보고 쓰는 것이 목적입니다. */
+interface CatRow { name: string; gov: string; own: string; basis: string }
 
 /* 공고에서 [사업 등록] 을 눌렀을 때 미리 채워 넣는 값.
    공고 목록에는 사업 기간·추진과제가 없으므로 채울 수 있는 것만 채웁니다. */
@@ -49,6 +54,9 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
   const [name, setName] = useState("");
   const [agency, setAgency] = useState("");
   const [folder, setFolder] = useState("");
+  /* 계정과목. 사업마다 하나라 여기서 한 번만 받습니다. 이 사업에서 쓴 돈은
+     모두 이 과목으로 잡힙니다. */
+  const [account, setAccount] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [budget, setBudget] = useState("");
@@ -58,11 +66,12 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
      과제와 같은 단계로 시작해서, 단계가 바뀌는 곳만 고르면 됩니다. */
   const [tasks, setTasks] = useState<{ name: string; stage: number }[]>([]);
   const [cats, setCats] = useState<CatRow[]>([]);
-  const 비목합계 = cats.reduce((s, c) => {
+  const 세목합계 = cats.reduce((s, c) => {
     const g = Number(onlyDigits(c.gov)) || 0;
     const o = Number(onlyDigits(c.own)) || 0;
     return { gov: s.gov + g, own: s.own + o, total: s.total + g + o };
   }, { gov: 0, own: 0, total: 0 });
+
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -71,6 +80,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
       setName(editing.name);
       setAgency(editing.agency);
       setFolder(editing.folderUrl);
+      setAccount(editing.account);
       setStart(editing.start);
       setEnd(editing.end);
       setBudget(editing.budget ? editing.budget.toLocaleString("ko-KR") : "");
@@ -86,18 +96,19 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
             name: c.name,
             gov: c.gov ? commas(String(c.gov)) : "",
             own: c.own ? commas(String(c.own)) : "",
+            basis: c.basis,
           }))
-        : [{ name: "", gov: "", own: "" }]);
+        : [{ name: "", gov: "", own: "", basis: "" }]);
     } else {
       // 공고에서 넘어왔으면 옮겨 온 값으로 시작합니다
       setName(prefill?.name ?? "");
       setAgency(prefill?.agency ?? "");
       setBudget(prefill?.budget ?? "");
-      setFolder(""); setStart(""); setEnd("");
+      setFolder(""); setAccount(""); setStart(""); setEnd("");
       setCycle("주간");
       setKpis(Array.from({ length: 4 }, () => ({ name: "", target: "", unit: "" })));
       setTasks(Array.from({ length: 4 }, () => ({ name: "", stage: 1 })));
-      setCats(DEFAULT_CATEGORIES.map((c) => ({ name: c, gov: "", own: "" })));
+      setCats(DEFAULT_CATEGORIES.map((n) => ({ name: n, gov: "", own: "", basis: "" })));
     }
     setErr("");
   }, [editing?.id, editing === null, prefill]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -113,7 +124,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
     setBusy(true);
     setErr("");
     const payload = {
-      name, agency, folderUrl: folder, start, end,
+      name, agency, folderUrl: folder, account, start, end,
       budget: Number(budget.replace(/,/g, "")) || 0,
       cycle,
       kpis: kpis.map((k) => ({
@@ -124,6 +135,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
         name: c.name,
         gov: Number(onlyDigits(c.gov)) || 0,
         own: Number(onlyDigits(c.own)) || 0,
+        basis: c.basis,
       })),
     };
     try {
@@ -170,6 +182,14 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
               <label htmlFor="rgAgency">발주처</label>
               <input id="rgAgency" placeholder="예: 보건복지부 · 한국보건산업진흥원"
                      value={agency} onChange={(e) => setAgency(e.target.value)} />
+            </div>
+            <div className="f" style={{ gridColumn: "1/-1" }}>
+              <label htmlFor="rgAccount">계정과목</label>
+              <input id="rgAccount" placeholder="예: 인건비 · 사업운영비 · 자산취득비"
+                     value={account} onChange={(e) => setAccount(e.target.value)} />
+              <span className="help">
+                이 사업에서 쓴 돈은 모두 이 과목으로 잡힙니다. 세목은 아래에서 나눕니다.
+              </span>
             </div>
             <div className="f" style={{ gridColumn: "1/-1" }}>
               <label htmlFor="rgFolder">공유폴더 주소</label>
@@ -251,38 +271,51 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
         </div>
 
         <div className="card">
-          <h2>4 · 예산 비목 <span className="hint">배정액을 넣으면 비목별 잔액이 표시됩니다</span></h2>
-          {/* 입력칸이 셋이라 무엇을 넣는 칸인지 머리글로 밝혀 둡니다.
-              배정액은 국고보조금 + 자기부담금이고, 합계는 서버가 냅니다. */}
+          <h2>4 · 예산 세목
+            <span className="hint">편성액을 넣으면 세목별 잔액이 표시됩니다</span>
+          </h2>
+          {/* 계정과목은 사업마다 하나라 위(1 · 기본 정보)에서 한 번만 받습니다.
+              세목마다 되풀이해 넣을 까닭이 없습니다. */}
           <div className="dyn-row cat cat-head" aria-hidden="true">
-            <span>비목</span><span>국고보조금 (원)</span><span>자기부담금 (원)</span><span />
+            <span>세목</span>
+            <span>국고보조금 (원)</span><span>자기부담금 (원)</span><span />
           </div>
           <div id="rgCatRows">
             {cats.map((c, i) => (
-              <div key={i} className="dyn-row cat">
-                <input placeholder="비목명 (예: 인건비)" className="c-nm" value={c.name}
-                       onChange={(e) => setCats(cats.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
-                <input placeholder="국고보조금" inputMode="numeric" className="c-amt" value={c.gov}
-                       aria-label="국고보조금 (원)"
-                       onChange={(e) => setCats(cats.map((x, j) =>
-                         j === i ? { ...x, gov: commas(onlyDigits(e.target.value)) } : x))} />
-                <input placeholder="자기부담금" inputMode="numeric" className="c-amt" value={c.own}
-                       aria-label="자기부담금 (원)"
-                       onChange={(e) => setCats(cats.map((x, j) =>
-                         j === i ? { ...x, own: commas(onlyDigits(e.target.value)) } : x))} />
-                <button type="button" className="rm" aria-label="비목 삭제"
-                        onClick={() => setCats(cats.filter((_, j) => j !== i))}>×</button>
+              <div key={i} className="cat-block">
+                <div className="dyn-row cat">
+                  <input placeholder="세목명 (예: 연구수당)" className="c-nm" value={c.name}
+                         aria-label="세목명"
+                         onChange={(e) => setCats(cats.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
+                  <input placeholder="국고보조금" inputMode="numeric" className="c-amt" value={c.gov}
+                         aria-label="국고보조금 (원)"
+                         onChange={(e) => setCats(cats.map((x, j) =>
+                           j === i ? { ...x, gov: commas(onlyDigits(e.target.value)) } : x))} />
+                  <input placeholder="자기부담금" inputMode="numeric" className="c-amt" value={c.own}
+                         aria-label="자기부담금 (원)"
+                         onChange={(e) => setCats(cats.map((x, j) =>
+                           j === i ? { ...x, own: commas(onlyDigits(e.target.value)) } : x))} />
+                  <button type="button" className="rm" aria-label="세목 삭제"
+                          onClick={() => setCats(cats.filter((_, j) => j !== i))}>×</button>
+                </div>
+                {/* 산출 근거는 계산에 쓰지 않습니다. 다음에 금액을 넣을 때
+                    보고 쓰라고 남기는 쪽지입니다. */}
+                <input className="c-basis" value={c.basis}
+                       aria-label={`${c.name || "세목"} 산출 근거`}
+                       placeholder="산출 근거 — 예: 단가 2,000,000 × 5명 × 8개월"
+                       onChange={(e) => setCats(cats.map((x, j) => j === i ? { ...x, basis: e.target.value } : x))} />
               </div>
             ))}
           </div>
           <button type="button" className="btn-add"
-                  onClick={() => setCats([...cats, { name: "", gov: "", own: "" }])}>+ 비목 추가</button>
+                  onClick={() => setCats([...cats,
+                    { name: "", gov: "", own: "", basis: "" }])}>+ 세목 추가</button>
           {/* 비목을 채우면서 총액이 맞는지 바로 확인할 수 있게 합계를 보여 줍니다.
               사람이 더하지 않아도 되고, 잘못 넣은 것을 그 자리에서 알아챕니다. */}
-          {비목합계.total > 0 && (
+          {세목합계.total > 0 && (
             <p className="cat-sum">
-              국고 <b>{fmtMoney(비목합계.gov)}</b> · 자부담 <b>{fmtMoney(비목합계.own)}</b>
-              {" "}= 배정 합계 <b>{fmtMoney(비목합계.total)}</b>
+              국고 <b>{fmtMoney(세목합계.gov)}</b> · 자부담 <b>{fmtMoney(세목합계.own)}</b>
+              {" "}= 편성 합계 <b>{fmtMoney(세목합계.total)}</b>
             </p>
           )}
         </div>

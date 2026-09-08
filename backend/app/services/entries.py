@@ -90,9 +90,13 @@ def _apply(db: Session, entry: ReportEntry, data: EntryInput) -> None:
         amt = int(s.get("amt") or 0)
         if amt <= 0:
             continue          # 금액이 없는 줄은 버립니다 (프로토타입과 같습니다)
-        entry.spends.append(
-            EntrySpend(category=str(s.get("cat") or ""), amount=amt, sort_order=i)
-        )
+        # 지출일을 안 적었으면 회차 날짜로 둡니다. 비워 두면 월별 합산에서
+        # '언제 쓴 돈인지 모르는 돈' 이 생깁니다.
+        날 = str(s.get("on") or "").strip()
+        entry.spends.append(EntrySpend(
+            category=str(s.get("cat") or ""), amount=amt, sort_order=i,
+            spend_on=date.fromisoformat(날) if 날 else entry.entry_date,
+        ))
 
     entry.kpi_values.clear()
     db.flush()

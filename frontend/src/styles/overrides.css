@@ -473,3 +473,101 @@
    표 기본값이 위 맞춤(vertical-align:top)이라 그 줄만 글자가 위로 붙어
    들쭉날쭉해 보였습니다. 가운데로 맞춥니다. */
 .rv-table td{vertical-align:middle}
+
+
+/* ── 예산: 계정과목 > 세목 ──────────────────────────────────────
+   등록 화면의 한 줄은 두 층입니다.
+     1줄  계정과목 | 세목 | 국고 | 자부담 | ×
+     2줄  산출 근거 (한 줄 통째로)
+   산출 근거를 옆에 두면 다섯 칸이 되어 모두 좁아집니다. 근거는 문장이라
+   좁은 칸에서는 읽지도 쓰지도 못합니다. */
+.dyn-row.cat{grid-template-columns:minmax(0,1.4fr) 1fr 1fr 34px}
+/* prototype.css 는 좁은 화면에서 이 줄을 2칸으로 되돌립니다(칸이 셋일 때
+   쓰던 규칙입니다). 이제 다섯이라 그대로 두면 칸이 어긋납니다.
+   좁은 화면에서는 계정과목·세목을 위에, 금액 둘을 아래에 놓습니다. */
+@media(max-width:700px){
+  .dyn-row.cat{grid-template-columns:1fr 1fr 34px}
+  .dyn-row.cat .c-nm{grid-column:1 / 3}
+  .dyn-row.cat .rm{grid-column:3; grid-row:1}
+}
+.cat-block{margin-bottom:10px}
+.cat-block .dyn-row.cat{margin-bottom:0}
+.c-basis{
+  width:100%; margin-top:4px; padding:7px 10px;
+  border:1px dashed var(--line-strong); border-radius:8px;
+  background:transparent; color:var(--ink-2); font-size:13.4px;
+}
+.c-basis::placeholder{color:var(--muted)}
+.c-basis:focus{border-style:solid; border-color:var(--accent); outline:none}
+
+/* 계정과목 — 사업마다 하나. 이 사업에서 쓴 돈은 모두 이 과목으로
+   잡히므로, 위의 집행액이 곧 계정과목 집행액입니다. 그래서 합계를 또
+   적지 않고 이름만 밝혀 둡니다. */
+.acct-line{
+  display:flex; align-items:baseline; gap:8px;
+  width:100%; margin:12px 0 2px; padding:8px 10px;
+  background:var(--surface-2); border-radius:8px;
+  border:0; text-align:left; font:inherit;
+}
+button.acct-line{cursor:pointer}
+button.acct-line:hover{background:var(--accent-soft)}
+.acct-line .k{font-size:12.6px; color:var(--muted); flex:none}
+.acct-line .v{font-size:14.4px; font-weight:600; color:var(--ink)}
+.acct-line .v.link{font-weight:500; color:var(--accent-ink); text-decoration:underline}
+
+/* 세목 한 줄과 그 아래 산출 근거 */
+.cat-line{margin-bottom:2px}
+/* 산출 근거는 줄 전체를 씁니다. 금액 옆에 붙이면 둘 다 잘립니다. */
+.cat-basis{
+  margin:-1px 0 5px 0; padding-left:2px;
+  font-size:12.2px; color:var(--muted);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
+/* ── 월별 집행 ────────────────────────────────────────────────
+   위는 흐름을 보는 막대, 아래는 정산에 옮겨 적는 표입니다. */
+.mo-card h2{display:flex; align-items:baseline; gap:8px}
+
+.mo-legend{display:flex; flex-wrap:wrap; gap:4px 14px; margin:2px 0 10px}
+.mo-legend span{display:inline-flex; align-items:center; gap:5px; font-size:12.6px; color:var(--ink-2)}
+.mo-legend i{width:9px; height:9px; border-radius:2px; flex:none}
+
+.mo-bars{
+  display:flex; gap:6px; align-items:flex-end;
+  height:132px; padding-bottom:2px; overflow-x:auto;
+}
+.mo-col{flex:1 1 0; min-width:34px; display:flex; flex-direction:column; height:100%}
+/* 막대가 자라는 자리. 아래쪽에 붙어서 위로 올라갑니다. */
+.mo-stack{flex:1; display:flex; align-items:flex-end; background:var(--track); border-radius:4px}
+.mo-fill{
+  width:100%; min-height:2px; display:flex; flex-direction:column-reverse;
+  border-radius:4px; overflow:hidden;
+}
+.mo-fill i{display:block; width:100%}
+.mo-x{margin-top:5px; text-align:center; font-size:11.8px; color:var(--muted)}
+
+/* 달이 많으면 표가 옆으로 밀립니다. 접으면 숫자가 겹칩니다. */
+.mo-wrap{margin-top:12px}
+.mo-tbl{min-width:100%}
+.mo-tbl th, .mo-tbl td{white-space:nowrap}
+.mo-tbl .mo-acct{
+  position:sticky; left:0; z-index:1; background:var(--surface);
+  display:table-cell; min-width:118px;
+}
+.mo-tbl .dot{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px}
+.mo-tbl .zero{color:var(--muted)}
+.mo-tbl .mo-tot{font-weight:600}
+.mo-tbl tfoot td{border-top:2px solid var(--line-strong); font-weight:600}
+.mo-tbl tfoot .mo-acct{background:var(--surface)}
+
+/* 집행 한 줄에 지출일이 붙었습니다. 입력 패널이 356px 라 네 칸을 한 줄에
+   넣으면 세목 칸이 40px 남짓으로 줄어 이름이 안 보입니다. 그래서 지출일만
+   아랫줄에 둡니다. 삭제 단추 자리는 비워 두어 줄 경계가 눈에 남습니다. */
+.spend-row{row-gap:4px; margin-bottom:10px}
+.spend-row .sp-on{
+  grid-column:1 / 3;
+  padding:6px 8px; text-align:left;
+  border:1px dashed var(--line-strong); border-radius:7px;
+  color:var(--ink-2); font-size:13px;
+}
+.spend-row .sp-on:focus{border-style:solid; border-color:var(--accent); outline:none}
