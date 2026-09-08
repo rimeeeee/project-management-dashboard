@@ -413,19 +413,23 @@
   width:100%;
 }
 
-/* 부적합 사유 — 눌러서 그 자리에서 적습니다.
-   다른 화면으로 넘어갔다 오면 흐름이 끊겨 결국 안 적게 됩니다. */
+/* 부적합 사유 — [지원완료] 가 있던 자리에 대신 놓입니다.
+   접기로 한 사업을 그대로 올릴 수 있으면 분류가 뜻을 잃으므로, 부적합일 때는
+   [지원완료] 를 두지 않고 왜 접었는지를 그 자리에 보여 줍니다.
+   눌러서 그 자리에서 고칩니다 — 다른 화면으로 넘어갔다 오면 흐름이 끊겨
+   결국 안 적게 됩니다. */
 .rv-reason{
-  display:block; margin-top:6px; text-align:left; width:100%;
+  flex:1; min-width:0; text-align:left;
   border:1px dashed var(--line-strong); border-radius:7px;
   background:var(--warn-bg); color:var(--warn-ink);
   padding:5px 9px; font-size:13.8px; cursor:pointer;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .rv-reason:hover{border-color:var(--warn-ink)}
-.rv-reason-edit{display:flex; gap:6px; margin-top:6px}
+.rv-reason-edit{display:flex; gap:6px}
 .rv-reason-edit input{flex:1; min-width:0}
 
-.rv-acts{display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap}
+.rv-acts{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
 
 /* 검토 결과를 색으로 구분합니다. 목록이 길어지면 글자를 하나하나 읽기보다
    색으로 먼저 훑게 됩니다.

@@ -121,7 +121,7 @@ export default function Reviews({ onToProject, onModal, reloadToken }: Props) {
             <th style={{ width: 150 }}>발주처</th>
             <th className="num" style={{ width: 124 }}>공고금액</th>
             <th style={{ width: 110 }}>접수 마감</th>
-            <th style={{ width: 190 }} />
+            <th style={{ width: 260 }} />
           </tr></thead>
           <tbody>
             {보일것.map((r) => (
@@ -140,15 +140,19 @@ export default function Reviews({ onToProject, onModal, reloadToken }: Props) {
                     ? <a href={r.url} target="_blank" rel="noopener noreferrer">{r.name} ↗</a>
                     : r.name}
 
-                  {/* 부적합 사유 — 이 화면의 핵심입니다.
-                      아직 저장 전(editing)이라도 보여야 합니다. 부적합을 고른
-                      순간에는 r.verdict 가 아직 ok 라서, 그것만 보면 사유칸이
-                      안 나타나 아무 반응이 없는 것처럼 보였습니다. */}
-                  {(r.verdict === "no" || editing === r.id) && (
+                </td>
+                <td className="cellsub">{r.agency || "-"}</td>
+                <td className="num cellnum">{r.amount ? `${fmtWon(r.amount)}원` : "-"}</td>
+                <td className="cellsub">{r.due ? dots(r.due) : "-"}</td>
+                <td>
+                  {/* 부적합·불확실이면 [지원완료] 를 두지 않습니다. 접기로 한
+                      사업을 그대로 올릴 수 있으면 분류가 뜻을 잃습니다.
+                      참여가능으로 되돌려야 올릴 수 있습니다.
+                      그 자리에는 대신 왜 접었는지를 보여 줍니다. */}
+                  {(r.verdict === "no" || editing === r.id) ? (
                     editing === r.id ? (
                       <div className="rv-reason-edit">
-                        <input autoFocus value={reasonText}
-                               placeholder="왜 부적합·불확실인지 적어 주세요"
+                        <input autoFocus value={reasonText} placeholder="사유"
                                onChange={(e) => setReasonText(e.target.value)}
                                onKeyDown={(e) => {
                                  if (e.key === "Enter" && reasonText.trim()) {
@@ -167,23 +171,24 @@ export default function Reviews({ onToProject, onModal, reloadToken }: Props) {
                                 onClick={() => setEditing(null)}>취소</button>
                       </div>
                     ) : (
-                      <button type="button" className="rv-reason"
-                              onClick={() => { setEditing(r.id); setReasonText(r.reason); }}>
-                        {r.reason || "사유를 적어 주세요"}
-                      </button>
+                      <div className="rv-acts">
+                        <button type="button" className="rv-reason"
+                                title="눌러서 고칩니다"
+                                onClick={() => { setEditing(r.id); setReasonText(r.reason); }}>
+                          {r.reason || "사유"}
+                        </button>
+                        <button type="button" className="mini-btn danger"
+                                onClick={() => 지우기(r)}>삭제</button>
+                      </div>
                     )
+                  ) : (
+                    <div className="rv-acts">
+                      <button type="button" className="mini-btn go"
+                              onClick={() => 지원완료(r)}>지원완료 →</button>
+                      <button type="button" className="mini-btn danger"
+                              onClick={() => 지우기(r)}>삭제</button>
+                    </div>
                   )}
-                </td>
-                <td className="cellsub">{r.agency || "-"}</td>
-                <td className="num cellnum">{r.amount ? `${fmtWon(r.amount)}원` : "-"}</td>
-                <td className="cellsub">{r.due ? dots(r.due) : "-"}</td>
-                <td>
-                  <div className="rv-acts">
-                    <button type="button" className="mini-btn go"
-                            onClick={() => 지원완료(r)}>지원완료 →</button>
-                    <button type="button" className="mini-btn danger"
-                            onClick={() => 지우기(r)}>삭제</button>
-                  </div>
                 </td>
               </tr>
             ))}
