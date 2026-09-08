@@ -114,14 +114,14 @@ export default function Reviews({ onToProject, onModal, reloadToken }: Props) {
       {err && <div className="err on">{err}</div>}
 
       <div className="card">
-        <div className="tbl-wrap"><table className="tbl">
+        <div className="tbl-wrap"><table className="tbl rv-table">
           <thead><tr>
             <th style={{ width: 152 }}>검토 결과</th>
             <th>사업명</th>
             <th style={{ width: 150 }}>발주처</th>
             <th className="num" style={{ width: 124 }}>공고금액</th>
             <th style={{ width: 110 }}>접수 마감</th>
-            <th style={{ width: 260 }} />
+            <th style={{ width: 330 }} />
           </tr></thead>
           <tbody>
             {보일것.map((r) => (

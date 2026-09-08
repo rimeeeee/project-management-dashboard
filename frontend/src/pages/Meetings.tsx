@@ -213,7 +213,7 @@ export default function Meetings({ projectId, onModal }: Props) {
       <div className="mt-grid">
         {/* ── 작성 ── */}
         <div className="card">
-          <h2>{editingId ? "✏️ 회의록 수정" : "📝 새 회의록"}
+          <h2>{editingId ? "회의록 수정" : "새 회의록"}
             {editingId && (
               <button type="button" className="mini-btn" style={{ marginLeft: "auto" }}
                       onClick={reset}>새로 작성</button>
@@ -227,7 +227,7 @@ export default function Meetings({ projectId, onModal }: Props) {
                 <input id="mtTitle" value={v.title} placeholder="예: 1차 콘텐츠 기획 회의"
                        onChange={(e) => setV({ ...v, title: e.target.value })} />
                 <button type="button" className="mini-btn" disabled={aiBusy || !v.title.trim()}
-                        onClick={() => void 제목제안()}>✨ 제목 다듬기</button>
+                        onClick={() => void 제목제안()}>제목 다듬기</button>
               </div>
               {titleChips.length > 0 && (
                 <div className="chips sug">
@@ -303,7 +303,7 @@ export default function Meetings({ projectId, onModal }: Props) {
               <span className="hint">{v.bullets.length}줄 · 눌러서 고칩니다</span>
               <button type="button" className="btn-ai" disabled={aiBusy || !v.title.trim()}
                       onClick={() => void 초안만들기()}>
-                {aiBusy ? "🤖 만드는 중…" : "🤖 AI 생성"}
+                {aiBusy ? "만드는 중…" : "AI 생성"}
               </button>
             </div>
 
@@ -352,7 +352,7 @@ export default function Meetings({ projectId, onModal }: Props) {
           {/* 사진 — 문서 뒤에 원본 비율 그대로 들어갑니다 */}
           <div className="mt-photos">
             <div className="mt-bullets-head">
-              <b>📷 회의 사진</b>
+              <b>회의 사진</b>
               <span className="hint">
                 {photos.length + pending.length}장 · 문서 뒤에 붙습니다
                 {pending.length > 0 && " (저장할 때 함께 올라갑니다)"}
@@ -409,7 +409,16 @@ export default function Meetings({ projectId, onModal }: Props) {
             <button type="button" className="btn-primary" disabled={!저장가능 || busy}
                     title={저장가능 ? "" : "회의명과 회의내용을 채워 주세요"}
                     onClick={() => void save()}>
-              {저장가능 ? "" : "🔒 "}{editingId ? "수정 저장" : "회의록 저장"}
+              {/* 잠금 표시는 이모지 대신 선으로 그립니다. 다른 화면이 모두
+                  이 방식이라 회의록만 이모지를 쓰면 튑니다. */}
+              {!저장가능 && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="4" y="11" width="16" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 018 0v4" />
+                </svg>
+              )}
+              {editingId ? "수정 저장" : "회의록 저장"}
             </button>
             {editingId && (
               <button type="button" className="btn-ghost" onClick={reset}>취소</button>
@@ -419,7 +428,7 @@ export default function Meetings({ projectId, onModal }: Props) {
 
         {/* ── 목록 ── */}
         <div className="card">
-          <h2>📄 회의록 <span className="hint">{list?.length ?? 0}건</span></h2>
+          <h2>회의록 <span className="hint">{list?.length ?? 0}건</span></h2>
           {list === null && <div className="empty">불러오는 중입니다.</div>}
           {list?.length === 0 && <div className="empty">아직 작성한 회의록이 없습니다.</div>}
           <div className="mt-list">
@@ -435,7 +444,7 @@ export default function Meetings({ projectId, onModal }: Props) {
                   {` · 내용 ${m.bullets.length}줄`}
                 </div>
                 <div className="mt-item-acts">
-                  <a className="mini-btn" href={meetingApi.docxUrl(projectId, m.id)}>⬇ 문서 받기</a>
+                  <a className="mini-btn" href={meetingApi.docxUrl(projectId, m.id)}>문서 받기</a>
                   <button type="button" className="mini-btn" onClick={() => edit(m)}>수정</button>
                   <button type="button" className="mini-btn danger" onClick={() => remove(m)}>삭제</button>
                 </div>
