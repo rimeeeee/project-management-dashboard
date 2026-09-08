@@ -16,6 +16,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.collector import sources
+from app.core.config import get_settings
 from app.models import Announcement, CollectorRun
 
 log = logging.getLogger("bizdash.collector")
@@ -104,6 +105,30 @@ def upsert(db: Session, items: list[dict], collected_at: datetime.datetime) -> t
     return added, updated, kept
 
 
+def keyword_filter(items: list[dict]) -> list[dict]:
+    """
+    관심 낱말이 들어간 공고만 남깁니다.
+
+    기관 게시판에는 우리와 상관없는 공고까지 다 올라옵니다. 그대로 받으면
+    300건이 넘어가 정작 봐야 할 것이 묻힙니다.
+
+    제목과 사업명을 함께 봅니다. 제목에는 안 적혀 있어도 사업명에 '보건' 이
+    들어가는 공고가 있습니다. 영문 낱말(AI·IT)은 대소문자를 가리지 않습니다.
+
+    설정(.env 의 COLLECT_KEYWORDS)을 비우면 걸러 내지 않고 모두 받습니다.
+    """
+    words = [w.strip().lower() for w in get_settings().collect_keywords.split(",") if w.strip()]
+    if not words:
+        return items
+
+    out = []
+    for a in items:
+        찾을곳 = f"{a.get('title', '')} {a.get('program', '')}".lower()
+        if any(w in 찾을곳 for w in words):
+            out.append(a)
+    return out
+
+
 def run(db: Session, trigger: str = "schedule") -> dict[str, Any]:
     """
     수집 한 번. 소스 하나가 실패해도 나머지는 계속 수집됩니다.
@@ -144,6 +169,12 @@ def run(db: Session, trigger: str = "schedule") -> dict[str, Any]:
         seen.add(k2)
         unique.append(a)
     unique.sort(key=lambda a: a["posted"], reverse=True)
+
+    걸러낸수 = len(unique)
+    unique = keyword_filter(unique)
+    걸러낸수 -= len(unique)
+    if 걸러낸수:
+        log.info("관심 낱말과 맞지 않아 %d건을 건너뛰었습니다.", 걸러낸수)
 
     added, updated, kept = upsert(db, unique, started)
 

@@ -4,7 +4,7 @@ import type { ProjectSummary } from "../lib/types";
 import { currentTheme, themeButtonLabel, toggleTheme, type Theme } from "../lib/theme";
 import { useState } from "react";
 
-export type View = "home" | "dash" | "register" | "ann";
+export type View = "home" | "dash" | "register" | "ann" | "reviews";
 
 interface Props {
   projects: ProjectSummary[];
@@ -81,6 +81,18 @@ export default function Sidebar({
 
       <nav className="nav-group" aria-label="메뉴">
         <div className="nav-label">메뉴</div>
+        <button
+          type="button"
+          className={"nav-btn" + (view === "reviews" ? " active" : "")}
+          onClick={() => onGo("reviews")}
+        >
+          <svg className="ic" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+               strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 11l3 3 8-8" /><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9" />
+          </svg>
+          <span className="nm">검토중 사업</span>
+        </button>
         <button
           className={"nav-btn" + (view === "register" ? " active" : "")}
           onClick={() => onGo("register")}

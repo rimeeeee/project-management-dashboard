@@ -12,9 +12,13 @@ export interface Meeting {
   id: number;
   title: string;
   metOn: string;              // YYYY-MM-DD
+  metStart: string;          // "HH:MM", 없으면 ""
+  metEnd: string;
   place: string;
+  writer: string;
   attendees: string[];
   bullets: string[];
+  nextSteps: string[];
   memo: string;
   amount: number;            // 원, 0 이면 금액 없음
   /* 파일 이름은 서버가 정합니다. 화면에서 따로 만들면 미리 본 이름과
@@ -27,9 +31,13 @@ export interface Meeting {
 export interface MeetingIn {
   title: string;
   metOn: string;
+  metStart: string;
+  metEnd: string;
   place: string;
+  writer: string;
   attendees: string[];
   bullets: string[];
+  nextSteps: string[];
   memo: string;
   amount: number;
 }
@@ -51,7 +59,14 @@ export const meetingApi = {
   /* AI 초안. 저장하지 않고 결과만 돌려줍니다 — 사람이 고친 뒤 저장해야
      남습니다. 손대기 전 글이 그대로 문서에 들어가지 않게 하려는 것입니다. */
   draft: (pid: string, body: { title: string; memo: string; place: string }) =>
-    request<{ bullets: string[] }>(`${base(pid)}/draft`, {
+    request<{ bullets: string[]; nextSteps: string[] }>(`${base(pid)}/draft`, {
+      method: "POST", body: JSON.stringify(body),
+    }),
+
+  /* 요청 및 예정 사항만 다시 씁니다. 지금 화면에 적힌 회의내용을 보냅니다 —
+     저장된 것이 아니라 고치는 중인 내용을 바탕으로 해야 앞뒤가 맞습니다. */
+  nextSteps: (pid: string, body: { title: string; bullets: string[]; memo: string }) =>
+    request<{ nextSteps: string[] }>(`${base(pid)}/next-steps`, {
       method: "POST", body: JSON.stringify(body),
     }),
 

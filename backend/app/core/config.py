@@ -40,6 +40,11 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173"
 
+    # 공고를 걸러 낼 낱말. 제목·사업명에 하나라도 들어 있어야 저장합니다.
+    # 기관 게시판은 우리와 상관없는 공고까지 다 올라와서, 그대로 받으면
+    # 정작 볼 것이 묻힙니다. 비워 두면 걸러 내지 않고 모두 받습니다.
+    collect_keywords: str = "의료,보건,병원,AI,디지털,헬스케어,IT"
+
     # 회의록 AI 초안(Google Gemini). 비워 두면 그 기능만 꺼지고
     # 회의록은 손으로 써서 그대로 씁니다.
     gemini_api_key: str = ""

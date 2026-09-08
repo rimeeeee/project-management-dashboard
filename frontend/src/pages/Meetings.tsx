@@ -17,7 +17,9 @@ interface Props {
 }
 
 const 빈값 = (): MeetingIn => ({
-  title: "", metOn: todayISO(), place: "", attendees: [], bullets: [], memo: "", amount: 0,
+  title: "", metOn: todayISO(), metStart: "", metEnd: "",
+  place: "", writer: "", attendees: [], bullets: [], nextSteps: [],
+  memo: "", amount: 0,
 });
 
 const onlyDigits = (s: string) => s.replace(/[^\d]/g, "");
@@ -34,14 +36,21 @@ export default function Meetings({ projectId, onModal }: Props) {
 
   // AI 관련
   const [aiBusy, setAiBusy] = useState(false);
+  /* 요청 사항 만들기는 회의내용 만들기와 따로 돕니다. 하나로 묶으면
+     둘 중 하나만 눌러도 두 단추가 같이 잠깁니다. */
+  const [stepBusy, setStepBusy] = useState(false);
   const [titleChips, setTitleChips] = useState<string[]>([]);
   /* 다시 생성할 때 앞의 결과를 옆에 두고 견줍니다. 새로 만든 것이 늘 나은
      것은 아니라서, 바로 덮어쓰면 좋았던 문장을 잃습니다. */
   const [prevBullets, setPrevBullets] = useState<string[] | null>(null);
 
-  /* 사진은 저장된 회의록에만 답니다. 아직 저장 전이면 붙일 곳(회의록 번호)이
-     없어서, 먼저 저장하도록 안내합니다. */
+  /* 이미 저장된 회의록에 붙어 있는 사진 */
   const [photos, setPhotos] = useState<MeetingPhoto[]>([]);
+  /* 아직 저장하지 않은 회의록에 붙일 사진.
+     사진은 회의록 번호가 있어야 올릴 수 있는데, 저장 전에는 번호가 없습니다.
+     그렇다고 '먼저 저장하세요' 라고만 하면 회의록을 쓰다 말고 저장부터 해야
+     해서 흐름이 끊깁니다. 그래서 파일을 들고 있다가 저장할 때 함께 올립니다. */
+  const [pending, setPending] = useState<{ file: File; url: string }[]>([]);
   const [dragOver, setDragOver] = useState(false);
 
   const load = useCallback(async () => {
@@ -58,17 +67,22 @@ export default function Meetings({ projectId, onModal }: Props) {
     setV(빈값()); setAmountText(""); setAttendeeText("");
     setEditingId(null); setTitleChips([]); setPrevBullets(null); setErr("");
     setPhotos([]);
+    pending.forEach((x) => URL.revokeObjectURL(x.url));
+    setPending([]);
   }
 
   function edit(m: Meeting) {
     setV({
-      title: m.title, metOn: m.metOn, place: m.place,
+      title: m.title, metOn: m.metOn, metStart: m.metStart, metEnd: m.metEnd,
+      place: m.place, writer: m.writer,
       attendees: [...m.attendees], bullets: [...m.bullets],
-      memo: m.memo, amount: m.amount,
+      nextSteps: [...m.nextSteps], memo: m.memo, amount: m.amount,
     });
     setAmountText(m.amount ? m.amount.toLocaleString("ko-KR") : "");
     setEditingId(m.id); setTitleChips([]); setPrevBullets(null); setErr("");
     setPhotos(m.photos);
+    pending.forEach((x) => URL.revokeObjectURL(x.url));
+    setPending([]);
   }
 
   // ── 참석자 칩 ────────────────────────────────────────────────
@@ -100,13 +114,41 @@ export default function Meetings({ projectId, onModal }: Props) {
         title: v.title, memo: v.memo, place: v.place,
       });
       if (비교) setPrevBullets(v.bullets);
-      setV((x) => ({ ...x, bullets: r.bullets }));
+      /* 요청 사항은 이미 적어 둔 것이 있으면 덮지 않습니다. 손으로 쓴 글을
+         말없이 지우면 다시 쓸 수 없습니다. 비어 있을 때만 채웁니다. */
+      setV((x) => ({
+        ...x,
+        bullets: r.bullets,
+        nextSteps: x.nextSteps.length > 0 ? x.nextSteps : r.nextSteps,
+      }));
     } catch (e) {
       setErr(e instanceof ApiError && e.status === 503
         ? e.message
         : "AI 초안을 만들지 못했습니다.");
     } finally {
       setAiBusy(false);
+    }
+  }
+
+  /* 회의내용을 손본 뒤 할 일만 다시 뽑습니다. 저장된 것이 아니라 지금
+     화면에 적힌 내용을 보냅니다 — 고친 내용이 반영되어야 하기 때문입니다. */
+  async function 예정만들기() {
+    const 줄 = v.bullets.filter((b) => b.trim());
+    if (!v.title.trim() || 줄.length === 0) {
+      setErr("회의명과 회의내용을 먼저 채워 주세요."); return;
+    }
+    setStepBusy(true); setErr("");
+    try {
+      const r = await meetingApi.nextSteps(projectId, {
+        title: v.title, bullets: 줄, memo: v.memo,
+      });
+      setV((x) => ({ ...x, nextSteps: r.nextSteps }));
+    } catch (e) {
+      setErr(e instanceof ApiError && e.status === 503
+        ? e.message
+        : "요청 및 예정 사항을 만들지 못했습니다.");
+    } finally {
+      setStepBusy(false);
     }
   }
 
@@ -124,9 +166,16 @@ export default function Meetings({ projectId, onModal }: Props) {
 
   // ── 사진 ─────────────────────────────────────────────────────
   async function 사진올리기(files: FileList | File[]) {
-    if (!editingId) { setErr("사진은 회의록을 저장한 뒤에 붙일 수 있습니다."); return; }
     setErr("");
-    for (const f of Array.from(files)) {
+    const 목록 = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (목록.length !== files.length) setErr("그림 파일만 붙일 수 있습니다.");
+
+    if (!editingId) {
+      // 아직 저장 전 — 들고만 있다가 저장할 때 함께 올립니다.
+      setPending((x) => [...x, ...목록.map((f) => ({ file: f, url: URL.createObjectURL(f) }))]);
+      return;
+    }
+    for (const f of 목록) {
       try {
         const ph = await meetingApi.uploadPhoto(projectId, editingId, f);
         setPhotos((x) => [...x, ph]);
@@ -150,8 +199,18 @@ export default function Meetings({ projectId, onModal }: Props) {
     setBusy(true); setErr("");
     const body: MeetingIn = { ...v, amount: Number(onlyDigits(amountText)) || 0 };
     try {
-      if (editingId) await meetingApi.update(projectId, editingId, body);
-      else await meetingApi.create(projectId, body);
+      const saved = editingId
+        ? await meetingApi.update(projectId, editingId, body)
+        : await meetingApi.create(projectId, body);
+
+      // 저장 전에 골라 둔 사진을 이제 붙입니다(회의록 번호가 생겼습니다).
+      for (const x of pending) {
+        try {
+          await meetingApi.uploadPhoto(projectId, saved.id, x.file);
+        } catch {
+          setErr("일부 사진을 올리지 못했습니다. 수정에서 다시 붙여 주세요.");
+        }
+      }
       await load();
       reset();
     } catch (e) {
@@ -188,7 +247,7 @@ export default function Meetings({ projectId, onModal }: Props) {
       <div className="mt-grid">
         {/* ── 작성 ── */}
         <div className="card">
-          <h2>{editingId ? "✏️ 회의록 수정" : "📝 새 회의록"}
+          <h2>{editingId ? "회의록 수정" : "새 회의록"}
             {editingId && (
               <button type="button" className="mini-btn" style={{ marginLeft: "auto" }}
                       onClick={reset}>새로 작성</button>
@@ -202,7 +261,7 @@ export default function Meetings({ projectId, onModal }: Props) {
                 <input id="mtTitle" value={v.title} placeholder="예: 1차 콘텐츠 기획 회의"
                        onChange={(e) => setV({ ...v, title: e.target.value })} />
                 <button type="button" className="mini-btn" disabled={aiBusy || !v.title.trim()}
-                        onClick={() => void 제목제안()}>✨ 제목 다듬기</button>
+                        onClick={() => void 제목제안()}>제목 다듬기</button>
               </div>
               {titleChips.length > 0 && (
                 <div className="chips sug">
@@ -223,9 +282,29 @@ export default function Meetings({ projectId, onModal }: Props) {
                        onChange={(e) => setV({ ...v, metOn: e.target.value })} />
               </div>
               <div className="f">
+                {/* 끝나는 시각은 안 적어도 됩니다. 언제 끝났는지 모르는 채로
+                    적는 일이 흔한데, 억지로 채우게 하면 없는 숫자를 지어냅니다. */}
+                <label htmlFor="mtStart">시간 <span className="hint">종료는 비워 둬도 됩니다</span></label>
+                <div className="mt-time">
+                  <input id="mtStart" type="time" value={v.metStart}
+                         onChange={(e) => setV({ ...v, metStart: e.target.value })} />
+                  <span aria-hidden="true">~</span>
+                  <input id="mtEnd" type="time" value={v.metEnd} aria-label="종료 시각"
+                         onChange={(e) => setV({ ...v, metEnd: e.target.value })} />
+                </div>
+              </div>
+            </div>
+
+            <div className="f2">
+              <div className="f">
                 <label htmlFor="mtPlace">장소</label>
                 <input id="mtPlace" value={v.place} placeholder="예: 본관 3층 회의실"
                        onChange={(e) => setV({ ...v, place: e.target.value })} />
+              </div>
+              <div className="f">
+                <label htmlFor="mtWriter">작성자</label>
+                <input id="mtWriter" value={v.writer} placeholder="예: 홍길동"
+                       onChange={(e) => setV({ ...v, writer: e.target.value })} />
               </div>
             </div>
 
@@ -278,7 +357,7 @@ export default function Meetings({ projectId, onModal }: Props) {
               <span className="hint">{v.bullets.length}줄 · 눌러서 고칩니다</span>
               <button type="button" className="btn-ai" disabled={aiBusy || !v.title.trim()}
                       onClick={() => void 초안만들기()}>
-                {aiBusy ? "🤖 만드는 중…" : "🤖 AI 생성"}
+                {aiBusy ? "만드는 중…" : "AI 생성"}
               </button>
             </div>
 
@@ -324,41 +403,83 @@ export default function Meetings({ projectId, onModal }: Props) {
             )}
           </div>
 
+          {/* 요청 및 예정 사항 — 회의내용에서 이어지는 할 일.
+              회의내용 바로 아래에 두어야 무엇을 바탕으로 나온 글인지
+              한눈에 보입니다. */}
+          <div className="mt-steps">
+            <div className="mt-bullets-head">
+              <b>요청 및 예정 사항</b>
+              <span className="hint">{v.nextSteps.length}줄 · 회의내용을 바탕으로 씁니다</span>
+              <button type="button" className="btn-ai"
+                      disabled={stepBusy || !v.title.trim() || v.bullets.filter((b) => b.trim()).length === 0}
+                      onClick={() => void 예정만들기()}>
+                {stepBusy ? "만드는 중…" : "AI 생성"}
+              </button>
+            </div>
+
+            {v.nextSteps.length === 0 && !stepBusy && (
+              <div className="empty">회의내용을 채운 뒤 [AI 생성] 을 누르거나, 아래에서 직접 적으세요.</div>
+            )}
+
+            {v.nextSteps.map((s, i) => (
+              <div key={i} className="mt-bullet">
+                <span className="dot" aria-hidden="true">•</span>
+                <input value={s}
+                       onChange={(e) => setV({
+                         ...v, nextSteps: v.nextSteps.map((x, j) => (j === i ? e.target.value : x)),
+                       })} />
+                <button type="button" className="rm" aria-label="줄 지우기"
+                        onClick={() => setV({ ...v, nextSteps: v.nextSteps.filter((_, j) => j !== i) })}>×</button>
+              </div>
+            ))}
+
+            <button type="button" className="btn-add"
+                    onClick={() => setV({ ...v, nextSteps: [...v.nextSteps, ""] })}>+ 줄 추가</button>
+          </div>
+
           {/* 사진 — 문서 뒤에 원본 비율 그대로 들어갑니다 */}
           <div className="mt-photos">
             <div className="mt-bullets-head">
-              <b>📷 회의 사진</b>
+              <b>회의 사진</b>
               <span className="hint">
-                {editingId ? `${photos.length}장 · 문서 뒤에 붙습니다`
-                           : "회의록을 저장하면 붙일 수 있습니다"}
+                {photos.length + pending.length}장 · 문서 뒤에 붙습니다
+                {pending.length > 0 && " (저장할 때 함께 올라갑니다)"}
               </span>
             </div>
 
-            <div className={"mt-drop" + (dragOver ? " over" : "") + (editingId ? "" : " off")}
-                 onDragOver={(e) => { e.preventDefault(); if (editingId) setDragOver(true); }}
+            <div className={"mt-drop" + (dragOver ? " over" : "")}
+                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                  onDragLeave={() => setDragOver(false)}
                  onDrop={(e) => {
                    e.preventDefault(); setDragOver(false);
                    if (e.dataTransfer.files.length) void 사진올리기(e.dataTransfer.files);
                  }}>
               <input id="mtPhoto" type="file" accept="image/*" multiple hidden
-                     disabled={!editingId}
                      onChange={(e) => {
                        if (e.target.files?.length) void 사진올리기(e.target.files);
                        e.target.value = "";
                      }} />
-              <label htmlFor="mtPhoto">
-                {editingId ? "여기에 끌어다 놓거나 눌러서 고릅니다" : "저장 후 사진을 붙일 수 있습니다"}
-              </label>
+              <label htmlFor="mtPhoto">여기에 끌어다 놓거나 눌러서 고릅니다</label>
             </div>
 
-            {photos.length > 0 && (
+            {(photos.length > 0 || pending.length > 0) && (
               <div className="mt-thumbs">
                 {photos.map((ph) => (
                   <div key={ph.id} className="mt-thumb">
                     <img src={ph.url} alt={ph.name} />
                     <button type="button" aria-label="사진 빼기"
                             onClick={() => void 사진지우기(ph)}>×</button>
+                  </div>
+                ))}
+                {/* 아직 저장 전이라 서버에 없는 사진 — 테두리로 구분합니다 */}
+                {pending.map((x, i) => (
+                  <div key={`p${i}`} className="mt-thumb wait">
+                    <img src={x.url} alt={x.file.name} />
+                    <button type="button" aria-label="사진 빼기"
+                            onClick={() => {
+                              URL.revokeObjectURL(x.url);
+                              setPending((y) => y.filter((_, j) => j !== i));
+                            }}>×</button>
                   </div>
                 ))}
               </div>
@@ -376,7 +497,16 @@ export default function Meetings({ projectId, onModal }: Props) {
             <button type="button" className="btn-primary" disabled={!저장가능 || busy}
                     title={저장가능 ? "" : "회의명과 회의내용을 채워 주세요"}
                     onClick={() => void save()}>
-              {저장가능 ? "" : "🔒 "}{editingId ? "수정 저장" : "회의록 저장"}
+              {/* 잠금 표시는 이모지 대신 선으로 그립니다. 다른 화면이 모두
+                  이 방식이라 회의록만 이모지를 쓰면 튑니다. */}
+              {!저장가능 && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="4" y="11" width="16" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 018 0v4" />
+                </svg>
+              )}
+              {editingId ? "수정 저장" : "회의록 저장"}
             </button>
             {editingId && (
               <button type="button" className="btn-ghost" onClick={reset}>취소</button>
@@ -386,7 +516,7 @@ export default function Meetings({ projectId, onModal }: Props) {
 
         {/* ── 목록 ── */}
         <div className="card">
-          <h2>📄 회의록 <span className="hint">{list?.length ?? 0}건</span></h2>
+          <h2>회의록 <span className="hint">{list?.length ?? 0}건</span></h2>
           {list === null && <div className="empty">불러오는 중입니다.</div>}
           {list?.length === 0 && <div className="empty">아직 작성한 회의록이 없습니다.</div>}
           <div className="mt-list">
@@ -402,7 +532,7 @@ export default function Meetings({ projectId, onModal }: Props) {
                   {` · 내용 ${m.bullets.length}줄`}
                 </div>
                 <div className="mt-item-acts">
-                  <a className="mini-btn" href={meetingApi.docxUrl(projectId, m.id)}>⬇ 문서 받기</a>
+                  <a className="mini-btn" href={meetingApi.docxUrl(projectId, m.id)}>문서 받기</a>
                   <button type="button" className="mini-btn" onClick={() => edit(m)}>수정</button>
                   <button type="button" className="mini-btn danger" onClick={() => remove(m)}>삭제</button>
                 </div>

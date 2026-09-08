@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -39,9 +40,13 @@ def bad(msg: str) -> HTTPException:
 class MeetingIn(BaseModel):
     title: str = ""
     metOn: str = ""
+    metStart: str = ""              # "HH:MM", 안 적어도 됩니다
+    metEnd: str = ""
     place: str = ""
+    writer: str = ""
     attendees: list[str] = Field(default_factory=list)
     bullets: list[str] = Field(default_factory=list)
+    nextSteps: list[str] = Field(default_factory=list)
     memo: str = ""
     amount: int = 0
 
@@ -51,9 +56,13 @@ def _out(m: Meeting) -> dict[str, Any]:
         "id": m.id,
         "title": m.title,
         "metOn": m.met_on.isoformat(),
+        "metStart": m.met_start,
+        "metEnd": m.met_end,
         "place": m.place,
+        "writer": m.writer,
         "attendees": list(m.attendees or []),
         "bullets": list(m.bullets or []),
+        "nextSteps": list(m.next_steps or []),
         "memo": m.memo,
         "amount": m.amount,
         # 파일 이름은 서버가 정합니다. 화면에서도 같은 규칙으로 미리 보여 주는데,
@@ -89,6 +98,22 @@ def _safe(s: str) -> str:
     return " ".join(s.split()).strip()
 
 
+def _time(s: str, 이름: str) -> str:
+    """
+    "HH:MM" 만 받습니다. 빈 값은 그대로 둡니다.
+
+    화면의 time 입력이 이 꼴로 보내지만, 주소창으로 곧장 부르는 경우도
+    있어 여기서 한 번 더 봅니다. 엉뚱한 글자가 그대로 문서에 찍히면
+    증빙 문서가 우스워집니다.
+    """
+    s = s.strip()
+    if not s:
+        return ""
+    if not re.fullmatch(r"([01][0-9]|2[0-3]):[0-5][0-9]", s):
+        raise bad(f"{이름}을 24시간 형식(예: 14:00)으로 적어 주세요.")
+    return s
+
+
 def _clean(body: MeetingIn) -> dict[str, Any]:
     title = " ".join(body.title.split()).strip()
     if not title:
@@ -108,13 +133,28 @@ def _clean(body: MeetingIn) -> dict[str, Any]:
         if nm and nm not in attendees:
             attendees.append(nm)
     bullets = [b.strip() for b in body.bullets if str(b).strip()]
+    next_steps = [s.strip() for s in body.nextSteps if str(s).strip()]
+
+    start = _time(body.metStart, "시작 시각")
+    end = _time(body.metEnd, "종료 시각")
+    # 끝이 앞서면 적다가 잘못 누른 것입니다. 그대로 두면 문서에
+    # "15:30 ~ 14:00" 이 찍힙니다. 자정을 넘기는 회의는 없다고 봅니다.
+    if start and end and end < start:
+        raise bad("종료 시각이 시작 시각보다 빠릅니다.")
+    # 끝만 적혀 있으면 어느 쪽을 뜻하는지 알 수 없습니다.
+    if end and not start:
+        raise bad("시작 시각을 먼저 적어 주세요.")
 
     return {
         "title": title,
         "met_on": met_on,
+        "met_start": start,
+        "met_end": end,
         "place": body.place.strip(),
+        "writer": " ".join(body.writer.split()).strip()[:60],
         "attendees": attendees,
         "bullets": bullets,
+        "next_steps": next_steps,
         "memo": body.memo.strip(),
         "amount": int(body.amount),
     }
@@ -218,13 +258,41 @@ def draft(
     저장하지 않습니다. 화면에서 고친 뒤 저장을 눌러야 남습니다.
     사람이 손대기 전 결과를 그대로 문서에 넣지 않게 하려는 것입니다.
     """
-    from app.services.minutes_ai import AIUnavailable, draft_bullets
+    from app.services.minutes_ai import AIUnavailable
+    from app.services.minutes_ai import draft as ai_draft
 
     title = " ".join(body.title.split()).strip()
     if not title:
         raise bad("회의명을 먼저 입력하세요.")
     try:
-        return {"bullets": draft_bullets(title, body.memo, body.place)}
+        return ai_draft(title, body.memo, body.place)
+    except AIUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+
+
+class NextStepsIn(BaseModel):
+    title: str = ""
+    bullets: list[str] = Field(default_factory=list)
+    memo: str = ""
+
+
+@router.post("/next-steps")
+def next_steps(body: NextStepsIn, p: Project = Depends(get_project)) -> dict[str, Any]:
+    """
+    지금 적혀 있는 회의내용만 보고 요청 및 예정 사항을 다시 씁니다.
+
+    초안을 받은 뒤 회의내용을 손보는 일이 잦은데, 그때 할 일도 함께
+    바뀌어야 앞뒤가 맞습니다. 그래서 따로 부를 수 있게 둡니다.
+    """
+    from app.services.minutes_ai import AIUnavailable, draft_next_steps
+
+    title = " ".join(body.title.split()).strip()
+    if not title:
+        raise bad("회의명을 먼저 입력하세요.")
+    if not [b for b in body.bullets if str(b).strip()]:
+        raise bad("회의내용을 먼저 채워 주세요.")
+    try:
+        return {"nextSteps": draft_next_steps(title, body.bullets, body.memo)}
     except AIUnavailable as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
 

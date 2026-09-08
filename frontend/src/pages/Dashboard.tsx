@@ -152,10 +152,10 @@ export default function Dashboard({
       <div className="proj-tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === "dash"}
                 className={"proj-tab" + (tab === "dash" ? " on" : "")}
-                onClick={() => setTab("dash")}>📊 현황</button>
+                onClick={() => setTab("dash")}>현황</button>
         <button type="button" role="tab" aria-selected={tab === "meetings"}
                 className={"proj-tab" + (tab === "meetings" ? " on" : "")}
-                onClick={() => setTab("meetings")}>📝 회의록</button>
+                onClick={() => setTab("meetings")}>회의록</button>
       </div>
 
       {tab === "meetings" && <Meetings projectId={p.id} onModal={onModal} />}

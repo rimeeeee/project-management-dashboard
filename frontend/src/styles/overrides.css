@@ -93,7 +93,7 @@
   background:transparent; color:var(--ink-2);
   cursor:pointer;
 }
-.cal-zoom:hover{background:var(--chip-bg); color:var(--ink)}
+.cal-zoom:hover{background:var(--surface-2); color:var(--ink)}
 .cal-card h2{display:flex; align-items:center}
 
 /* ── 공고: 카드 보기 / 목록 보기 전환 ─────────────────────────────
@@ -111,8 +111,8 @@
 .view-toggle .vt:last-child{border-radius:0 8px 8px 0; margin-left:-1px}
 .view-toggle .vt:hover{color:var(--ink)}
 .view-toggle .vt.on{
-  background:var(--chip-bg); color:var(--ink);
-  border-color:var(--line-strong); z-index:1;
+  background:var(--accent-soft); color:var(--accent-ink);
+  border-color:var(--accent); z-index:1;
 }
 
 /* 목록 보기 — 공고명은 넓게, 나머지는 고정폭.
@@ -270,7 +270,7 @@
   border-bottom:2px solid transparent; margin-bottom:-1px;
 }
 .proj-tab:hover{color:var(--ink-2)}
-.proj-tab.on{color:var(--ink); border-bottom-color:#7FB3D5}
+.proj-tab.on{color:var(--ink); border-bottom-color:var(--accent)}
 
 /* 작성 | 목록 두 칸. 좁아지면 위아래로 쌓습니다. */
 .mt-grid{display:grid; grid-template-columns:1.4fr 1fr; gap:16px; align-items:start; margin-top:16px}
@@ -285,23 +285,23 @@
 .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
 .chip{
   display:inline-flex; align-items:center; gap:5px;
-  background:#EAF2F8; color:#2C5F7C; border:1px solid #CFE2EE;
+  background:var(--accent-soft); color:var(--accent-ink); border:1px solid var(--line-strong);
   border-radius:99px; padding:4px 10px; font-size:14px;
 }
-.chip button{border:0; background:transparent; color:#5B8CA8; cursor:pointer; font-size:15px; line-height:1}
+.chip button{border:0; background:transparent; color:var(--accent-ink); cursor:pointer; font-size:15px; line-height:1}
 .chip button:hover{color:var(--crit-ink)}
-.chips.sug .chip.pick{cursor:pointer; background:#F3F0FA; border-color:#DED6F0; color:#5B4B8A}
-.chips.sug .chip.pick:hover{background:#E9E3F6}
+.chips.sug .chip.pick{cursor:pointer; background:var(--surface-2); color:var(--ink-2)}
+.chips.sug .chip.pick:hover{background:var(--accent-soft); color:var(--accent-ink)}
 
 /* 회의내용 */
 .mt-bullets{margin-top:16px; padding-top:14px; border-top:1px solid var(--line)}
 .mt-bullets-head{display:flex; align-items:center; gap:8px; margin-bottom:10px}
 .mt-bullets-head .hint{margin-right:auto}
 .btn-ai{
-  border:1px solid #CFE2EE; background:#EAF2F8; color:#2C5F7C;
+  border:1px solid var(--line-strong); background:var(--accent-soft); color:var(--accent-ink);
   border-radius:8px; padding:7px 14px; font-size:14.4px; font-weight:600; cursor:pointer;
 }
-.btn-ai:hover:not(:disabled){background:#DCEAF4}
+.btn-ai:hover:not(:disabled){background:var(--accent-soft); filter:brightness(.96)}
 .btn-ai:disabled{opacity:.5; cursor:not-allowed}
 
 /* 줄을 눌러 그 자리에서 고칩니다 */
@@ -312,7 +312,7 @@
   padding:6px 8px; border-radius:7px; font-size:15px; color:var(--ink);
 }
 .mt-bullet input:hover{background:var(--surface-2)}
-.mt-bullet input:focus{background:var(--surface); border-color:#CFE2EE; outline:none}
+.mt-bullet input:focus{background:var(--surface); border-color:var(--accent); outline:none}
 .mt-bullet .rm{
   border:0; background:transparent; color:var(--muted);
   cursor:pointer; font-size:17px; line-height:1; padding:2px 6px;
@@ -329,10 +329,10 @@
 /* 저장될 파일 이름 — 저장 전에 확인합니다 */
 .mt-file{
   display:flex; align-items:center; gap:10px; margin-top:14px;
-  padding:10px 12px; background:#FAF7EE; border:1px solid #EDE3CC; border-radius:9px;
+  padding:10px 12px; background:var(--surface-2); border:1px solid var(--line); border-radius:9px;
 }
-.mt-file .k{font-size:13.2px; color:#8A7443; white-space:nowrap}
-.mt-file .v{font-size:14.4px; color:#5F5230; font-weight:600; word-break:break-all}
+.mt-file .k{font-size:13.2px; color:var(--muted); white-space:nowrap}
+.mt-file .v{font-size:14.4px; color:var(--ink-2); font-weight:600; word-break:break-all}
 
 /* 사업 등록 화면의 [저장 / 삭제 / 취소] 와 같은 규격을 씁니다.
    같은 자리의 단추가 화면마다 크기가 다르면 어수선해 보입니다.
@@ -344,6 +344,14 @@
    높이는 두 단추의 테두리·글자·안쪽 여백을 모두 같게 맞춰 냅니다.
    .btn-primary 는 테두리가 없고 .btn-ghost 는 1px 라, 투명 테두리를
    둘러 주지 않으면 딱 2px 낮아집니다. */
+/* 시간 — 시작 ~ 종료. 가운데 물결표가 눌리지 않게 두 칸만 늘어납니다. */
+.mt-time{display:flex; align-items:center; gap:6px}
+.mt-time input{flex:1; min-width:0}
+.mt-time span{color:var(--muted); flex:none}
+
+/* 요청 및 예정 사항 — 회의내용과 같은 모양으로 둡니다. */
+.mt-steps{margin-top:14px}
+
 .mt-actions{display:flex; gap:8px; margin-top:14px; align-items:stretch}
 .mt-actions .btn-primary,
 .mt-actions .btn-ghost{
@@ -357,15 +365,20 @@
   line-height:1.5;
 }
 .mt-actions .btn-ghost{border-color:var(--line-strong)}
+
+/* prototype.css 의 svg{display:block} 탓에 단추 안의 자물쇠가 글자와
+   따로 한 줄을 차지합니다. 가로 정렬로 두어 나란히 놓습니다. */
+.mt-actions .btn-primary{display:inline-flex; align-items:center; justify-content:center; gap:6px}
+.mt-actions .btn-primary svg{flex:none}
 .mt-actions .btn-primary:disabled{opacity:.45; cursor:not-allowed}
 
 /* 목록 */
 .mt-list{display:flex; flex-direction:column; gap:8px; margin-top:10px}
 .mt-item{border:1px solid var(--line); border-radius:9px; padding:11px 12px}
-.mt-item.on{border-color:#9CC6E0; background:#F7FBFD}
+.mt-item.on{border-color:var(--accent); background:var(--surface-2)}
 .mt-item-top{display:flex; align-items:baseline; gap:8px}
 .mt-item-top b{font-size:15.6px; flex:1; min-width:0}
-.mt-amt{font-size:13.8px; color:#2C5F7C; background:#EAF2F8; border-radius:6px; padding:2px 7px; white-space:nowrap}
+.mt-amt{font-size:13.8px; color:var(--accent-ink); background:var(--accent-soft); border-radius:6px; padding:2px 7px; white-space:nowrap}
 .mt-item-sub{font-size:13.2px; color:var(--muted); margin-top:3px}
 .mt-item-acts{display:flex; gap:6px; margin-top:9px}
 .mt-item-acts .mini-btn{text-decoration:none}
@@ -380,8 +393,8 @@
   transition:.12s;
 }
 .mt-drop label{color:var(--muted); font-size:14.4px; cursor:pointer; display:block}
-.mt-drop:hover:not(.off){border-color:#9CC6E0; background:#F7FBFD}
-.mt-drop.over{border-color:#7FB3D5; background:#EAF2F8}
+.mt-drop:hover{border-color:var(--accent); background:var(--surface)}
+.mt-drop.over{border-color:var(--accent); background:var(--accent-soft)}
 .mt-drop.off{opacity:.55}
 .mt-drop.off label{cursor:not-allowed}
 
@@ -398,3 +411,65 @@
   cursor:pointer; font-size:14px; line-height:1; padding:0;
 }
 .mt-thumb button:hover{background:var(--crit-bg); color:var(--crit-ink); border-color:var(--crit-ink)}
+
+/* ══ 검토중 사업 ═══════════════════════════════════════════════════
+   공고 → 검토중 → [지원완료] → 내 사업.
+   바로 '내 사업' 으로 올리면 실제로 지원하지 않은 것까지 섞여 진행률·예산이
+   엉킵니다. 부적합으로 접을 때 사유를 남겨, 비슷한 공고가 또 왔을 때
+   처음부터 다시 따지지 않게 합니다. */
+.rv-bar{display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap}
+.rv-bar .hint{margin-left:auto}
+
+.rv-verdict{
+  border:1px solid var(--line-strong); border-radius:8px;
+  padding:6px 8px; font-size:14px; color:var(--ink-2); background:var(--surface);
+  width:100%;
+}
+
+/* 부적합 사유 — [지원완료] 가 있던 자리에 대신 놓입니다.
+   접기로 한 사업을 그대로 올릴 수 있으면 분류가 뜻을 잃으므로, 부적합일 때는
+   [지원완료] 를 두지 않고 왜 접었는지를 그 자리에 보여 줍니다.
+   눌러서 그 자리에서 고칩니다 — 다른 화면으로 넘어갔다 오면 흐름이 끊겨
+   결국 안 적게 됩니다. */
+.rv-reason{
+  flex:1; min-width:0; text-align:left;
+  border:1px dashed var(--line-strong); border-radius:7px;
+  background:var(--warn-bg); color:var(--warn-ink);
+  padding:5px 9px; font-size:13.8px; cursor:pointer;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.rv-reason:hover{border-color:var(--warn-ink)}
+.rv-reason-edit{display:flex; gap:6px}
+.rv-reason-edit input{flex:1; min-width:0}
+
+.rv-acts{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+
+/* 검토 결과를 색으로 구분합니다. 목록이 길어지면 글자를 하나하나 읽기보다
+   색으로 먼저 훑게 됩니다.
+     참여가능    파랑   — 해볼 만한 것
+     부적합·불확실 빨강 — 접은 것
+   ('지원완료' 는 상태가 아니라 [지원완료 →] 단추입니다. 눌러 사업으로
+    올리면 이 목록에서 내려가므로, 그 단추를 노랑으로 두어 '다음 걸음' 임을
+    알립니다.) */
+.rv-verdict{font-weight:600}
+.rv-verdict[data-v="ok"]{
+  background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink);
+}
+.rv-verdict[data-v="no"]{
+  background:var(--crit-bg); border-color:var(--crit-ink); color:var(--crit-ink);
+}
+
+/* [지원완료 →] — 검토를 마치고 사업으로 올리는 다음 걸음 */
+.rv-acts .mini-btn.go{
+  background:var(--warn-bg); border-color:var(--warn-ink); color:var(--warn-ink); font-weight:600;
+}
+.rv-acts .mini-btn.go:hover{background:var(--warn-bg); filter:brightness(.95)}
+
+/* 아직 저장하지 않은 사진 — 저장할 때 함께 올라갑니다.
+   이미 붙은 사진과 구분되게 점선 테두리를 둘렀습니다. */
+.mt-thumb.wait img{border-style:dashed; border-color:var(--accent)}
+
+/* 검토중 목록 — 줄마다 높이가 다릅니다(사유가 있는 줄은 조금 더 높습니다).
+   표 기본값이 위 맞춤(vertical-align:top)이라 그 줄만 글자가 위로 붙어
+   들쭉날쭉해 보였습니다. 가운데로 맞춥니다. */
+.rv-table td{vertical-align:middle}
