@@ -426,3 +426,28 @@
 .rv-reason-edit input{flex:1; min-width:0}
 
 .rv-acts{display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap}
+
+/* 검토 결과를 색으로 구분합니다. 목록이 길어지면 글자를 하나하나 읽기보다
+   색으로 먼저 훑게 됩니다.
+     참여가능    파랑   — 해볼 만한 것
+     부적합·불확실 빨강 — 접은 것
+   ('지원완료' 는 상태가 아니라 [지원완료 →] 단추입니다. 눌러 사업으로
+    올리면 이 목록에서 내려가므로, 그 단추를 노랑으로 두어 '다음 걸음' 임을
+    알립니다.) */
+.rv-verdict{font-weight:600}
+.rv-verdict[data-v="ok"]{
+  background:#EAF2F8; border-color:#9CC6E0; color:#1B5E8A;
+}
+.rv-verdict[data-v="no"]{
+  background:#FBEAEA; border-color:#E0A0A0; color:#A03232;
+}
+
+/* [지원완료 →] — 검토를 마치고 사업으로 올리는 다음 걸음 */
+.rv-acts .mini-btn.go{
+  background:#FCF3D9; border-color:#E3C766; color:#7A5C10; font-weight:600;
+}
+.rv-acts .mini-btn.go:hover{background:#F7E9BF}
+
+/* 아직 저장하지 않은 사진 — 저장할 때 함께 올라갑니다.
+   이미 붙은 사진과 구분되게 점선 테두리를 둘렀습니다. */
+.mt-thumb.wait img{border-style:dashed; border-color:#9CC6E0}

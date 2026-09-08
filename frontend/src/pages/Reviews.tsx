@@ -116,7 +116,7 @@ export default function Reviews({ onToProject, onModal, reloadToken }: Props) {
       <div className="card">
         <div className="tbl-wrap"><table className="tbl">
           <thead><tr>
-            <th style={{ width: 116 }}>검토 결과</th>
+            <th style={{ width: 152 }}>검토 결과</th>
             <th>사업명</th>
             <th style={{ width: 150 }}>발주처</th>
             <th className="num" style={{ width: 124 }}>공고금액</th>
@@ -128,7 +128,8 @@ export default function Reviews({ onToProject, onModal, reloadToken }: Props) {
               <tr key={r.id}>
                 <td>
                   <select className="rv-verdict" aria-label="검토 결과"
-                          value={r.verdict}
+                          value={editing === r.id ? "no" : r.verdict}
+                          data-v={editing === r.id ? "no" : r.verdict}
                           onChange={(e) => 결과바꾸기(r, e.target.value as Verdict)}>
                     <option value="ok">참여가능</option>
                     <option value="no">부적합·불확실</option>
@@ -139,8 +140,11 @@ export default function Reviews({ onToProject, onModal, reloadToken }: Props) {
                     ? <a href={r.url} target="_blank" rel="noopener noreferrer">{r.name} ↗</a>
                     : r.name}
 
-                  {/* 부적합 사유 — 이 화면의 핵심입니다 */}
-                  {r.verdict === "no" && (
+                  {/* 부적합 사유 — 이 화면의 핵심입니다.
+                      아직 저장 전(editing)이라도 보여야 합니다. 부적합을 고른
+                      순간에는 r.verdict 가 아직 ok 라서, 그것만 보면 사유칸이
+                      안 나타나 아무 반응이 없는 것처럼 보였습니다. */}
+                  {(r.verdict === "no" || editing === r.id) && (
                     editing === r.id ? (
                       <div className="rv-reason-edit">
                         <input autoFocus value={reasonText}
@@ -175,7 +179,7 @@ export default function Reviews({ onToProject, onModal, reloadToken }: Props) {
                 <td className="cellsub">{r.due ? dots(r.due) : "-"}</td>
                 <td>
                   <div className="rv-acts">
-                    <button type="button" className="mini-btn"
+                    <button type="button" className="mini-btn go"
                             onClick={() => 지원완료(r)}>지원완료 →</button>
                     <button type="button" className="mini-btn danger"
                             onClick={() => 지우기(r)}>삭제</button>
