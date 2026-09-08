@@ -92,6 +92,19 @@ def _put_text(para, text: str) -> None:
         para.add_run(text)
 
 
+def 시간문구(m: Meeting) -> str:
+    """
+    "14:00 ~ 15:30" · "14:00" · "" 중 하나.
+
+    끝나는 시각은 안 적어도 됩니다. 회의가 길어져 언제 끝났는지 모르는 채로
+    적는 일이 흔한데, 그때 억지로 채우게 하면 없는 숫자를 지어내게 됩니다.
+    """
+    시작, 끝 = (m.met_start or "").strip(), (m.met_end or "").strip()
+    if 시작 and 끝:
+        return f"{시작} ~ {끝}"
+    return 시작 or 끝
+
+
 def build(m: Meeting, photo_dir: Path) -> bytes:
     doc = Document(str(TEMPLATE))
     t = doc.tables[0]
@@ -100,9 +113,9 @@ def build(m: Meeting, photo_dir: Path) -> bytes:
     인원 = len(m.attendees or [])
 
     _put(t.rows[0].cells[1], m.met_on.strftime("%Y. %m. %d."))
-    _put(t.rows[0].cells[3], "")                       # 시간 — 따로 받지 않습니다
+    _put(t.rows[0].cells[3], 시간문구(m) or "-")
     _put(t.rows[1].cells[1], m.place or "-")
-    _put(t.rows[1].cells[3], "")                       # 작성자 — 손으로 적습니다
+    _put(t.rows[1].cells[3], m.writer or "-")
     _put(t.rows[2].cells[1], 참석)
 
     # '참석자 (총 n명)' 의 n 을 실제 인원으로 바꿉니다.
@@ -115,8 +128,9 @@ def build(m: Meeting, photo_dir: Path) -> bytes:
 
     _put_bullets(t.rows[4].cells[1], m.bullets or ["-"])
 
-    # 요청 및 예정 사항 — 따로 받는 칸이 없어 비워 둡니다(손으로 적습니다).
-    _put(t.rows[5].cells[1], "")
+    # 요청 및 예정 사항. 회의내용과 같은 글머리 기호를 씁니다 —
+    # 한 문서 안에서 목록 모양이 두 가지면 어수선해 보입니다.
+    _put_bullets(t.rows[5].cells[1], m.next_steps or ["-"])
 
     # 사진은 표 뒤에 붙입니다. 원본 비율을 지키려고 너비만 정합니다.
     photos = [photo_dir / ph.stored_name for ph in m.photos]

@@ -17,7 +17,9 @@ interface Props {
 }
 
 const 빈값 = (): MeetingIn => ({
-  title: "", metOn: todayISO(), place: "", attendees: [], bullets: [], memo: "", amount: 0,
+  title: "", metOn: todayISO(), metStart: "", metEnd: "",
+  place: "", writer: "", attendees: [], bullets: [], nextSteps: [],
+  memo: "", amount: 0,
 });
 
 const onlyDigits = (s: string) => s.replace(/[^\d]/g, "");
@@ -34,6 +36,9 @@ export default function Meetings({ projectId, onModal }: Props) {
 
   // AI 관련
   const [aiBusy, setAiBusy] = useState(false);
+  /* 요청 사항 만들기는 회의내용 만들기와 따로 돕니다. 하나로 묶으면
+     둘 중 하나만 눌러도 두 단추가 같이 잠깁니다. */
+  const [stepBusy, setStepBusy] = useState(false);
   const [titleChips, setTitleChips] = useState<string[]>([]);
   /* 다시 생성할 때 앞의 결과를 옆에 두고 견줍니다. 새로 만든 것이 늘 나은
      것은 아니라서, 바로 덮어쓰면 좋았던 문장을 잃습니다. */
@@ -68,9 +73,10 @@ export default function Meetings({ projectId, onModal }: Props) {
 
   function edit(m: Meeting) {
     setV({
-      title: m.title, metOn: m.metOn, place: m.place,
+      title: m.title, metOn: m.metOn, metStart: m.metStart, metEnd: m.metEnd,
+      place: m.place, writer: m.writer,
       attendees: [...m.attendees], bullets: [...m.bullets],
-      memo: m.memo, amount: m.amount,
+      nextSteps: [...m.nextSteps], memo: m.memo, amount: m.amount,
     });
     setAmountText(m.amount ? m.amount.toLocaleString("ko-KR") : "");
     setEditingId(m.id); setTitleChips([]); setPrevBullets(null); setErr("");
@@ -108,13 +114,41 @@ export default function Meetings({ projectId, onModal }: Props) {
         title: v.title, memo: v.memo, place: v.place,
       });
       if (비교) setPrevBullets(v.bullets);
-      setV((x) => ({ ...x, bullets: r.bullets }));
+      /* 요청 사항은 이미 적어 둔 것이 있으면 덮지 않습니다. 손으로 쓴 글을
+         말없이 지우면 다시 쓸 수 없습니다. 비어 있을 때만 채웁니다. */
+      setV((x) => ({
+        ...x,
+        bullets: r.bullets,
+        nextSteps: x.nextSteps.length > 0 ? x.nextSteps : r.nextSteps,
+      }));
     } catch (e) {
       setErr(e instanceof ApiError && e.status === 503
         ? e.message
         : "AI 초안을 만들지 못했습니다.");
     } finally {
       setAiBusy(false);
+    }
+  }
+
+  /* 회의내용을 손본 뒤 할 일만 다시 뽑습니다. 저장된 것이 아니라 지금
+     화면에 적힌 내용을 보냅니다 — 고친 내용이 반영되어야 하기 때문입니다. */
+  async function 예정만들기() {
+    const 줄 = v.bullets.filter((b) => b.trim());
+    if (!v.title.trim() || 줄.length === 0) {
+      setErr("회의명과 회의내용을 먼저 채워 주세요."); return;
+    }
+    setStepBusy(true); setErr("");
+    try {
+      const r = await meetingApi.nextSteps(projectId, {
+        title: v.title, bullets: 줄, memo: v.memo,
+      });
+      setV((x) => ({ ...x, nextSteps: r.nextSteps }));
+    } catch (e) {
+      setErr(e instanceof ApiError && e.status === 503
+        ? e.message
+        : "요청 및 예정 사항을 만들지 못했습니다.");
+    } finally {
+      setStepBusy(false);
     }
   }
 
@@ -248,9 +282,29 @@ export default function Meetings({ projectId, onModal }: Props) {
                        onChange={(e) => setV({ ...v, metOn: e.target.value })} />
               </div>
               <div className="f">
+                {/* 끝나는 시각은 안 적어도 됩니다. 언제 끝났는지 모르는 채로
+                    적는 일이 흔한데, 억지로 채우게 하면 없는 숫자를 지어냅니다. */}
+                <label htmlFor="mtStart">시간 <span className="hint">종료는 비워 둬도 됩니다</span></label>
+                <div className="mt-time">
+                  <input id="mtStart" type="time" value={v.metStart}
+                         onChange={(e) => setV({ ...v, metStart: e.target.value })} />
+                  <span aria-hidden="true">~</span>
+                  <input id="mtEnd" type="time" value={v.metEnd} aria-label="종료 시각"
+                         onChange={(e) => setV({ ...v, metEnd: e.target.value })} />
+                </div>
+              </div>
+            </div>
+
+            <div className="f2">
+              <div className="f">
                 <label htmlFor="mtPlace">장소</label>
                 <input id="mtPlace" value={v.place} placeholder="예: 본관 3층 회의실"
                        onChange={(e) => setV({ ...v, place: e.target.value })} />
+              </div>
+              <div className="f">
+                <label htmlFor="mtWriter">작성자</label>
+                <input id="mtWriter" value={v.writer} placeholder="예: 홍길동"
+                       onChange={(e) => setV({ ...v, writer: e.target.value })} />
               </div>
             </div>
 
@@ -347,6 +401,40 @@ export default function Meetings({ projectId, onModal }: Props) {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* 요청 및 예정 사항 — 회의내용에서 이어지는 할 일.
+              회의내용 바로 아래에 두어야 무엇을 바탕으로 나온 글인지
+              한눈에 보입니다. */}
+          <div className="mt-steps">
+            <div className="mt-bullets-head">
+              <b>요청 및 예정 사항</b>
+              <span className="hint">{v.nextSteps.length}줄 · 회의내용을 바탕으로 씁니다</span>
+              <button type="button" className="btn-ai"
+                      disabled={stepBusy || !v.title.trim() || v.bullets.filter((b) => b.trim()).length === 0}
+                      onClick={() => void 예정만들기()}>
+                {stepBusy ? "만드는 중…" : "AI 생성"}
+              </button>
+            </div>
+
+            {v.nextSteps.length === 0 && !stepBusy && (
+              <div className="empty">회의내용을 채운 뒤 [AI 생성] 을 누르거나, 아래에서 직접 적으세요.</div>
+            )}
+
+            {v.nextSteps.map((s, i) => (
+              <div key={i} className="mt-bullet">
+                <span className="dot" aria-hidden="true">•</span>
+                <input value={s}
+                       onChange={(e) => setV({
+                         ...v, nextSteps: v.nextSteps.map((x, j) => (j === i ? e.target.value : x)),
+                       })} />
+                <button type="button" className="rm" aria-label="줄 지우기"
+                        onClick={() => setV({ ...v, nextSteps: v.nextSteps.filter((_, j) => j !== i) })}>×</button>
+              </div>
+            ))}
+
+            <button type="button" className="btn-add"
+                    onClick={() => setV({ ...v, nextSteps: [...v.nextSteps, ""] })}>+ 줄 추가</button>
           </div>
 
           {/* 사진 — 문서 뒤에 원본 비율 그대로 들어갑니다 */}

@@ -453,11 +453,19 @@ class Meeting(Base):
 
     title: Mapped[str] = mapped_column(Text, nullable=False)          # 회의명
     met_on: Mapped[date] = mapped_column(Date, nullable=False)        # 일시
+    # 회의 시간. "HH:MM" 이고 안 적으면 빈 값입니다.
+    # 감사에서 회의 시간대를 묻는 일이 있어(식대·초과근무와 겹치는지)
+    # 시작과 끝을 따로 둡니다. 끝은 안 적어도 됩니다.
+    met_start: Mapped[str] = mapped_column(String(5), default="")
+    met_end: Mapped[str] = mapped_column(String(5), default="")
     place: Mapped[str] = mapped_column(String(120), default="")       # 장소
+    writer: Mapped[str] = mapped_column(String(60), default="")       # 작성자
     # 참석자는 이름 목록입니다. 화면에서 칩으로 넣고 뺍니다.
     attendees: Mapped[list] = mapped_column(JSON, default=list)
     # 회의내용 bullet. 문단이 아니라 줄 단위라 목록으로 둡니다.
     bullets: Mapped[list] = mapped_column(JSON, default=list)
+    # 요청 및 예정 사항. 회의내용에서 이어지는 할 일이라 줄 단위로 둡니다.
+    next_steps: Mapped[list] = mapped_column(JSON, default=list)
     # AI 에 준 추가 메모. 다시 생성할 때 무엇을 넣었는지 되짚어 볼 수 있게 남깁니다.
     memo: Mapped[str] = mapped_column(Text, default="")
     # 회의비(원). 0 은 '금액 없음' 입니다.

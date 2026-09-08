@@ -50,71 +50,130 @@ def _ask(key: str, payload: dict) -> dict:
             raise AIUnavailable("AI 서버에 닿지 못했습니다. 바깥 인터넷을 확인해 주세요.") from e
     raise 마지막 or AIUnavailable("쓸 수 있는 AI 모델이 없습니다.")
 
-지침 = """당신은 공공사업 회의록을 정리하는 실무자입니다.
-주어진 회의명과 메모로 '회의내용' bullet 을 작성하세요.
+# 두 곳(초안 만들기·요청 사항만 다시 쓰기)에서 같은 규칙을 써야 해서 따로 둡니다.
+_공통 = """당신은 공공사업 회의록을 정리하는 실무자입니다.
+사업비 지출 증빙에 쓰는 문서이므로 담백하게 씁니다.
 
-규칙
-- 6개에서 8개 사이로 씁니다.
+공통 규칙
 - 각 줄은 명사형으로 끝냅니다. (예: "일정 확정", "역할 분담 논의")
   "~했다", "~합니다" 같은 서술형으로 끝내지 마세요.
 - 한 줄은 15자에서 40자 사이로 씁니다.
+- "회의를 진행함", "의견을 나눔" 같은 빈 말은 쓰지 마세요."""
+
+지침 = _공통 + """
+
+'회의내용' 과 '요청 및 예정 사항' 을 함께 작성하세요.
+
+회의내용
+- 6개에서 8개 사이로 씁니다.
 - 회의에서 실제로 오갈 만한 구체적인 내용을 씁니다.
-  "회의를 진행함", "의견을 나눔" 같은 빈 말은 쓰지 마세요.
 - 메모에 있는 낱말은 반드시 녹여서 씁니다.
-- 사업비 지출 증빙에 쓰는 문서이므로 담백하게 씁니다.
+
+요청 및 예정 사항
+- 2개에서 4개 사이로 씁니다.
+- 회의내용에서 이어지는 '앞으로 할 일' 만 씁니다.
+  이미 끝난 일을 다시 적지 마세요.
+- 누가·언제까지가 드러나면 함께 적습니다. (예: "협조 공문 발송 (~9월 말)")
 
 결과는 아래 JSON 형식으로만 답하세요. 다른 말을 붙이지 마세요.
-{"bullets": ["...", "...", "..."]}"""
+{"bullets": ["...", "..."], "nextSteps": ["...", "..."]}"""
+
+# 회의내용을 사람이 고친 뒤 요청 사항만 다시 뽑을 때 씁니다.
+지침_예정 = _공통 + """
+
+주어진 '회의내용' 을 바탕으로 '요청 및 예정 사항' 만 작성하세요.
+
+- 2개에서 4개 사이로 씁니다.
+- 회의내용에서 이어지는 '앞으로 할 일' 만 씁니다.
+  회의내용에 이미 적힌 문장을 그대로 옮기지 마세요.
+- 누가·언제까지가 드러나면 함께 적습니다. (예: "협조 공문 발송 (~9월 말)")
+
+결과는 아래 JSON 형식으로만 답하세요. 다른 말을 붙이지 마세요.
+{"nextSteps": ["...", "..."]}"""
 
 
 def enabled() -> bool:
     return bool((get_settings().gemini_api_key or "").strip())
 
 
-def draft_bullets(title: str, memo: str = "", place: str = "") -> list[str]:
+def _key() -> str:
     key = (get_settings().gemini_api_key or "").strip()
     if not key:
         raise AIUnavailable("AI 키가 설정되지 않았습니다.")
+    return key
 
+
+def _lines(raw, 최대: int) -> list[str]:
+    """AI 가 준 줄을 다듬습니다. 빈 줄·겹치는 줄·글머리 기호를 걷어냅니다."""
+    out: list[str] = []
+    for b in raw or []:
+        b = " ".join(str(b).split()).strip().lstrip("-•· ")
+        if b and b not in out:
+            out.append(b[:80])
+    return out[:최대]
+
+
+def _json_of(data: dict) -> dict:
+    try:
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        return json.loads(text)
+    except (KeyError, IndexError, ValueError) as e:
+        raise AIUnavailable("AI 응답을 알아볼 수 없습니다.") from e
+
+
+def draft(title: str, memo: str = "", place: str = "") -> dict[str, list[str]]:
+    """
+    회의내용과 요청 및 예정 사항을 한 번에 받습니다.
+
+    따로 두 번 묻지 않는 이유는, 요청 사항이 회의내용에서 이어져야 하는데
+    따로 물으면 서로 아귀가 맞지 않는 글이 나오기 때문입니다.
+    """
     묻기 = f"회의명: {title}\n"
     if place:
         묻기 += f"장소: {place}\n"
     if memo.strip():
         묻기 += f"추가 메모(반드시 반영): {memo.strip()}\n"
 
-    payload = {
+    got = _json_of(_ask(_key(), {
         "systemInstruction": {"parts": [{"text": 지침}]},
         "contents": [{"role": "user", "parts": [{"text": 묻기}]}],
-        "generationConfig": {
-            "temperature": 0.7,
-            "responseMimeType": "application/json",
-        },
-    }
-    data = _ask(key, payload)
+        "generationConfig": {"temperature": 0.7, "responseMimeType": "application/json"},
+    }))
 
-    try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-        bullets = json.loads(text).get("bullets", [])
-    except (KeyError, IndexError, ValueError) as e:
-        raise AIUnavailable("AI 응답을 알아볼 수 없습니다.") from e
-
-    # 빈 줄·너무 긴 줄을 걷어내고 8개로 자릅니다.
-    out: list[str] = []
-    for b in bullets:
-        b = " ".join(str(b).split()).strip().lstrip("-•· ")
-        if b and b not in out:
-            out.append(b[:80])
-    if not out:
+    bullets = _lines(got.get("bullets"), 8)
+    if not bullets:
         raise AIUnavailable("AI 가 내용을 만들지 못했습니다.")
-    return out[:8]
+    return {"bullets": bullets, "nextSteps": _lines(got.get("nextSteps"), 4)}
+
+
+def draft_next_steps(title: str, bullets: list[str], memo: str = "") -> list[str]:
+    """
+    이미 적힌 회의내용만 보고 요청 및 예정 사항을 씁니다.
+
+    회의내용을 사람이 손본 뒤에 쓰라고 따로 둡니다. 고친 내용이 아니라
+    처음 만든 내용을 바탕으로 할 일이 나오면 앞뒤가 맞지 않습니다.
+    """
+    줄 = [str(b).strip() for b in (bullets or []) if str(b).strip()]
+    if not 줄:
+        raise AIUnavailable("회의내용을 먼저 채워 주세요.")
+
+    묻기 = f"회의명: {title}\n회의내용:\n" + "\n".join(f"- {b}" for b in 줄)
+    if memo.strip():
+        묻기 += f"\n추가 메모: {memo.strip()}"
+
+    got = _json_of(_ask(_key(), {
+        "systemInstruction": {"parts": [{"text": 지침_예정}]},
+        "contents": [{"role": "user", "parts": [{"text": 묻기}]}],
+        "generationConfig": {"temperature": 0.7, "responseMimeType": "application/json"},
+    }))
+    steps = _lines(got.get("nextSteps"), 4)
+    if not steps:
+        raise AIUnavailable("AI 가 요청 및 예정 사항을 만들지 못했습니다.")
+    return steps
 
 
 def title_suggestions(title: str) -> list[str]:
     """회의명 다듬기 — 화면에 칩으로 보여 주고 고르면 바뀝니다."""
-    key = (get_settings().gemini_api_key or "").strip()
-    if not key:
-        raise AIUnavailable("AI 키가 설정되지 않았습니다.")
-
     payload = {
         "systemInstruction": {"parts": [{"text":
             "공공사업 회의록의 회의명을 다듬습니다. 주어진 이름을 바탕으로 더 정확하고 "
@@ -124,7 +183,7 @@ def title_suggestions(title: str) -> list[str]:
         "generationConfig": {"temperature": 0.8, "responseMimeType": "application/json"},
     }
     try:
-        data = _ask(key, payload)
+        data = _ask(_key(), payload)
         text = data["candidates"][0]["content"]["parts"][0]["text"]
         titles = json.loads(text).get("titles", [])
     except (KeyError, IndexError, ValueError) as e:
