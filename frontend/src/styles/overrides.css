@@ -398,3 +398,31 @@
   cursor:pointer; font-size:14px; line-height:1; padding:0;
 }
 .mt-thumb button:hover{background:var(--crit-bg); color:var(--crit-ink); border-color:var(--crit-ink)}
+
+/* ══ 검토중 사업 ═══════════════════════════════════════════════════
+   공고 → 검토중 → [지원완료] → 내 사업.
+   바로 '내 사업' 으로 올리면 실제로 지원하지 않은 것까지 섞여 진행률·예산이
+   엉킵니다. 부적합으로 접을 때 사유를 남겨, 비슷한 공고가 또 왔을 때
+   처음부터 다시 따지지 않게 합니다. */
+.rv-bar{display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap}
+.rv-bar .hint{margin-left:auto}
+
+.rv-verdict{
+  border:1px solid var(--line-strong); border-radius:8px;
+  padding:6px 8px; font-size:14px; color:var(--ink-2); background:var(--surface);
+  width:100%;
+}
+
+/* 부적합 사유 — 눌러서 그 자리에서 적습니다.
+   다른 화면으로 넘어갔다 오면 흐름이 끊겨 결국 안 적게 됩니다. */
+.rv-reason{
+  display:block; margin-top:6px; text-align:left; width:100%;
+  border:1px dashed var(--line-strong); border-radius:7px;
+  background:var(--warn-bg); color:var(--warn-ink);
+  padding:5px 9px; font-size:13.8px; cursor:pointer;
+}
+.rv-reason:hover{border-color:var(--warn-ink)}
+.rv-reason-edit{display:flex; gap:6px; margin-top:6px}
+.rv-reason-edit input{flex:1; min-width:0}
+
+.rv-acts{display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap}

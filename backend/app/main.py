@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 # settings 는 아래 설정값 변수(settings = get_settings())와 이름이 겹치므로 별칭을 씁니다
-from app.api import announcements, auth, entries, meetings, projects, register
+from app.api import announcements, auth, entries, meetings, projects, register, reviews
 from app.api import settings as settings_api
 from app import __version__
 from app.core.config import ROOT, get_settings
@@ -82,6 +82,7 @@ app.include_router(projects.router)
 app.include_router(entries.router)
 app.include_router(meetings.router)
 app.include_router(meetings.photo_router)
+app.include_router(reviews.router)
 app.include_router(register.router)
 app.include_router(register.settings_router)
 app.include_router(announcements.router)

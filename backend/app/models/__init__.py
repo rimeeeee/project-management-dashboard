@@ -494,3 +494,45 @@ class MeetingPhoto(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     meeting: Mapped[Meeting] = relationship(back_populates="photos")
+
+
+# ---------------------------------------------------------------------
+# 검토중 사업
+# ---------------------------------------------------------------------
+class Review(Base):
+    """
+    지원할지 말지 따져 보는 단계의 사업.
+
+    공고를 보고 바로 '내 사업' 으로 올리면, 실제로 지원하지 않은 것까지
+    섞여 진행률·예산이 엉킵니다. 그래서 한 단계를 둡니다.
+
+        공고  →  검토중  →  (지원완료)  →  내 사업
+                   └ 참여가능 / 부적합·불확실
+
+    부적합으로 접었을 때는 사유를 남깁니다. 나중에 비슷한 공고가 또 왔을 때
+    '그때 왜 안 했더라' 를 다시 따지지 않기 위해서입니다.
+    """
+
+    __tablename__ = "reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    name: Mapped[str] = mapped_column(String(300), nullable=False)     # 사업(공고)명
+    agency: Mapped[str] = mapped_column(String(300), default="")       # 발주처
+    amount: Mapped[int] = mapped_column(BigInteger, default=0)         # 공고금액(원)
+    due: Mapped[date | None] = mapped_column(Date, nullable=True)      # 접수 마감일
+    url: Mapped[str] = mapped_column(Text, default="")                 # 공고 원문
+
+    # ok = 참여가능 · no = 부적합·불확실
+    verdict: Mapped[str] = mapped_column(String(10), default="ok")
+    # 부적합으로 본 까닭. 참여가능일 때는 비어 있습니다.
+    reason: Mapped[str] = mapped_column(Text, default="")
+    note: Mapped[str] = mapped_column(Text, default="")                # 자유 메모
+
+    # 어느 공고에서 왔는지. 같은 공고를 두 번 올리지 않으려고 둡니다.
+    announcement_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )

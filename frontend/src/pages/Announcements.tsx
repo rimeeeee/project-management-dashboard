@@ -333,7 +333,7 @@ export default function Announcements({
                     <div className="ann-acts">
                       <button type="button" className={"star" + (a.fav ? " on" : "")}
                               onClick={() => toggleFav(a)}>{a.fav ? "★" : "☆"}</button>
-                      <button type="button" className="mini-btn" onClick={() => onToProject(a)}>사업 등록</button>
+                      <button type="button" className="mini-btn" onClick={() => onToProject(a)}>검토 목록에 넣기</button>
                       <button type="button" className="mini-btn" onClick={() => onEditAnn(a)}>수정</button>
                       {a.source === "manual" && (
                         <button type="button" className="mini-btn danger" onClick={() => removeAnn(a)}>삭제</button>
@@ -381,7 +381,7 @@ export default function Announcements({
               <div className="ann-acts">
                 <button type="button" className={"star" + (a.fav ? " on" : "")}
                         onClick={() => toggleFav(a)}>{a.fav ? "★ 관심" : "☆ 관심"}</button>
-                <button type="button" className="mini-btn" onClick={() => onToProject(a)}>사업 등록</button>
+                <button type="button" className="mini-btn" onClick={() => onToProject(a)}>검토 목록에 넣기</button>
                 <button type="button" className="mini-btn" onClick={() => onEditAnn(a)}>수정</button>
                 {/* 수집된 공고는 지워도 다음 수집 때 되살아나므로 삭제 버튼을 두지
                     않습니다 (기관 목록에 있는 한 다시 들어옵니다). 삭제는 직접

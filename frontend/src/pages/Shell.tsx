@@ -10,6 +10,8 @@ import Dashboard from "./Dashboard";
 import Home from "./Home";
 import Register, { type Prefill } from "./Register";
 import Announcements from "./Announcements";
+import Reviews from "./Reviews";
+import { reviewApi } from "../lib/reviewApi";
 import AnnForm from "../components/AnnForm";
 import type { Ann } from "../lib/annApi";
 
@@ -36,6 +38,10 @@ export default function Shell() {
   // 공고 화면 — 등록·수정 팝업과 불러오기 팝업, 그리고 목록 새로고침 신호
   const [annForm, setAnnForm] = useState<{ ann: Ann | null } | null>(null);
   const [annReload, setAnnReload] = useState(0);
+  const [reviewReload, setReviewReload] = useState(0);
+  /* 검토 목록에서 넘어와 등록하는 중이면 그 항목 번호. 등록을 마치면
+     검토 목록에서 내립니다 — 같은 사업이 두 곳에 남으면 헷갈립니다. */
+  const [fromReviewId, setFromReviewId] = useState<number | null>(null);
   const [annMinistries, setAnnMinistries] = useState<string[]>([]);
   // 공고에서 [사업 등록] 을 눌렀을 때 등록 화면에 옮겨 넣을 값
   const [prefill, setPrefill] = useState<Prefill | null>(null);
@@ -156,6 +162,14 @@ export default function Shell() {
               applyProject(saved);
               setEditingProjectId(null);
               setPrefill(null);
+              // 검토 목록에서 올라온 사업이면 그 줄을 내립니다.
+              if (fromReviewId !== null) {
+                const id = fromReviewId;
+                setFromReviewId(null);
+                void reviewApi.remove(id)
+                  .then(() => setReviewReload((n) => n + 1))
+                  .catch(() => { /* 지우지 못해도 사업 등록은 끝났습니다 */ });
+              }
               go("dash", saved.id);
               openModal(msg, sub);
             }}
@@ -188,20 +202,54 @@ export default function Shell() {
             onModal={openModal}
             onEditAnn={(a) => setAnnForm({ ann: a })}
             onToProject={(a) => {
-              /* 공고를 '내 사업'으로 옮깁니다.
-                 공고 목록에는 사업 기간·추진과제가 없으므로 채울 수 있는 것만
-                 채우고, 나머지는 사람이 적도록 안내합니다. */
-              setEditingProjectId(null);
-              setPrefill({
-                name: a.title,
-                agency: [a.ministry, a.agency].filter(Boolean).join(" · "),
-                budget: a.amount ? a.amount.toLocaleString("ko-KR") : "",
-              });
-              go("register");
-              openModal("공고 정보를 옮겼습니다", "사업 기간과 추진과제를 채워 등록하세요.");
+              /* 공고를 '검토중' 으로 담습니다.
+
+                 바로 '내 사업' 으로 올리면 실제로 지원하지 않은 것까지 섞여
+                 진행률·예산이 엉킵니다. 지원하기로 정한 뒤 검토 목록에서
+                 [지원완료] 를 눌러야 사업으로 올라갑니다. */
+              void (async () => {
+                try {
+                  await reviewApi.create({
+                    name: a.title,
+                    agency: [a.ministry, a.agency].filter(Boolean).join(" · "),
+                    amount: a.amount || 0,
+                    due: a.due || "",
+                    url: a.url || "",
+                    verdict: "ok",
+                    reason: "",
+                    note: "",
+                    announcementId: a.id,
+                  });
+                  setReviewReload((n) => n + 1);
+                  openModal("검토 목록에 담았습니다",
+                            "[검토중 사업] 에서 참여가능·부적합을 정하고, 지원하기로 하면 [지원완료] 를 누르세요.");
+                } catch (e) {
+                  openModal(e instanceof Error ? e.message : "검토 목록에 담지 못했습니다.");
+                }
+              })();
             }}
             onFacets={setAnnMinistries}
             reloadToken={annReload}
+          />
+        )}
+
+        {view === "reviews" && (
+          <Reviews
+            reloadToken={reviewReload}
+            onModal={openModal}
+            onToProject={(r) => {
+              /* 검토를 마치고 지원하기로 한 사업 — 등록 화면으로 넘깁니다.
+                 등록을 마치면 검토 목록에서 내립니다(아래 onSaved). */
+              setEditingProjectId(null);
+              setPrefill({
+                name: r.name,
+                agency: r.agency,
+                budget: r.amount ? r.amount.toLocaleString("ko-KR") : "",
+              });
+              setFromReviewId(r.id);
+              go("register");
+              openModal("검토한 내용을 옮겼습니다", "사업 기간과 추진과제를 채워 등록하세요.");
+            }}
           />
         )}
 
