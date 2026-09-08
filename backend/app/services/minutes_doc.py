@@ -1,102 +1,135 @@
 """
 회의록 docx 만들기.
 
-증빙 문서라 양식이 정해져 있습니다.
-  회의록 / 회의명 / 일시 / 장소 / 참 석 자 / 회의내용(bullet)
+docs/회의록양식/회의록양식.docx 를 열어 빈칸만 채웁니다.
+서식을 코드로 다시 그리지 않는 이유는, 그렇게 하면 실제 쓰는 양식과 조금씩
+어긋나고 양식이 바뀔 때마다 코드를 고쳐야 하기 때문입니다. 양식이 바뀌면
+그 파일만 새로 넣으면 됩니다.
 
-한글(HWP)에서도 열립니다. hwpx 로 바로 만들지 않는 이유는, 파이썬에서
-hwpx 를 제대로 다룰 수 있는 라이브러리가 사실상 없기 때문입니다.
+양식 표는 6행 4열이고 아래처럼 생겼습니다.
+
+    0행  일시      | (값)            | 시간   | (값)
+    1행  장소      | (값)            | 작성자 | (값)
+    2행  참석자    | (값 · 3칸 병합)
+    3행  (4칸 병합 — 비어 있는 줄)
+    4행  회의 내용 | (bullet · 3칸 병합)
+    5행  요청 및   | (값 · 3칸 병합)
+         예정 사항
 """
 from __future__ import annotations
 
+import copy
 import io
 from pathlib import Path
 
 from docx import Document
-from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Cm, Pt
+from docx.shared import Cm
 
+from app.core.config import ROOT
 from app.models import Meeting
 
-# 한글 문서에서 흔히 쓰는 글꼴. 없는 PC 에서는 비슷한 글꼴로 대체됩니다.
-FONT = "맑은 고딕"
+TEMPLATE = ROOT / "docs" / "회의록양식" / "회의록양식.docx"
 
 # 사진을 넣을 때 쓰는 최대 너비(cm). 본문 폭에 맞춥니다.
+# 높이는 정하지 않습니다 — python-docx 가 원본 비율대로 계산합니다.
 PHOTO_MAX_W = Cm(15.0)
 
 
-def _set_font(run, size: int, bold: bool = False) -> None:
-    run.font.name = FONT
-    run.font.size = Pt(size)
-    run.bold = bold
-    # 한글은 eastAsia 글꼴을 따로 지정해야 제대로 적용됩니다.
-    rpr = run._element.get_or_add_rPr()
-    rfonts = rpr.get_or_add_rFonts()
-    rfonts.set(
-        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}eastAsia", FONT
-    )
+def _put(cell, text: str) -> None:
+    """
+    칸의 첫 문단에 값만 넣습니다.
+
+    글꼴·크기·가운데 맞춤 같은 서식은 양식이 이미 갖고 있으므로,
+    문단을 새로 만들지 않고 있던 문단의 글자만 바꿔 끼웁니다.
+    """
+    para = cell.paragraphs[0]
+    for r in list(para.runs)[1:]:
+        r._element.getparent().remove(r._element)
+    if para.runs:
+        para.runs[0].text = text
+    else:
+        para.add_run(text)
+    # 두 번째 문단부터는 양식에 있던 빈 줄이라 그대로 둡니다.
+
+
+def _put_bullets(cell, bullets: list[str]) -> None:
+    """
+    회의 내용 칸에 줄을 채웁니다.
+
+    양식의 'List Paragraph' 문단을 본으로 삼아 필요한 만큼 복제합니다.
+    새로 만들면 양식이 정해 둔 들여쓰기·글머리 기호를 잃습니다.
+    """
+    본 = next((p for p in cell.paragraphs if p.style.name == "List Paragraph"), None)
+    if 본 is None:                       # 양식이 바뀌어 본이 없으면 그냥 적습니다
+        for b in bullets:
+            cell.add_paragraph(b)
+        return
+
+    # 본 문단을 첫 줄로 쓰고, 나머지는 복제해서 뒤에 붙입니다.
+    앞 = 본
+    for i, b in enumerate(bullets):
+        if i == 0:
+            _put_text(본, b)
+        else:
+            새 = copy.deepcopy(본._p)
+            앞._p.addnext(새)
+            from docx.text.paragraph import Paragraph
+            앞 = Paragraph(새, 본._parent)
+            _put_text(앞, b)
+
+    # 양식에 있던 빈 List Paragraph 는 지웁니다(빈 글머리 기호가 찍힙니다).
+    for p in list(cell.paragraphs):
+        if p.style.name == "List Paragraph" and not p.text.strip():
+            p._p.getparent().remove(p._p)
+
+
+def _put_text(para, text: str) -> None:
+    for r in list(para.runs)[1:]:
+        r._element.getparent().remove(r._element)
+    if para.runs:
+        para.runs[0].text = text
+    else:
+        para.add_run(text)
 
 
 def build(m: Meeting, photo_dir: Path) -> bytes:
-    doc = Document()
+    doc = Document(str(TEMPLATE))
+    t = doc.tables[0]
 
-    # 여백 — 증빙 문서라 넉넉하지 않게, 한 장에 많이 담기도록 둡니다.
-    for s in doc.sections:
-        s.top_margin = s.bottom_margin = Cm(2.0)
-        s.left_margin = s.right_margin = Cm(2.2)
+    참석 = ", ".join(m.attendees or []) or "-"
+    인원 = len(m.attendees or [])
 
-    title = doc.add_paragraph()
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    _set_font(title.add_run("회 의 록"), 20, bold=True)
-    doc.add_paragraph()
+    _put(t.rows[0].cells[1], m.met_on.strftime("%Y. %m. %d."))
+    _put(t.rows[0].cells[3], "")                       # 시간 — 따로 받지 않습니다
+    _put(t.rows[1].cells[1], m.place or "-")
+    _put(t.rows[1].cells[3], "")                       # 작성자 — 손으로 적습니다
+    _put(t.rows[2].cells[1], 참석)
 
-    # 머리 정보는 표로 둡니다. 줄글로 적으면 항목이 밀려 읽기 어렵습니다.
-    머리 = [
-        ("회 의 명", m.title),
-        ("일     시", m.met_on.strftime("%Y년 %m월 %d일")),
-        ("장     소", m.place or "-"),
-        ("참 석 자", ", ".join(m.attendees or []) or "-"),
-    ]
-    table = doc.add_table(rows=len(머리), cols=2)
-    table.style = "Table Grid"
-    table.alignment = WD_TABLE_ALIGNMENT.CENTER
-    for i, (k, v) in enumerate(머리):
-        table.rows[i].cells[0].width = Cm(3.2)
-        table.rows[i].cells[1].width = Cm(12.8)
-        for cell, text, bold in ((table.rows[i].cells[0], k, True),
-                                 (table.rows[i].cells[1], v, False)):
-            para = cell.paragraphs[0]
-            _set_font(para.add_run(text), 11, bold=bold)
+    # '참석자 (총 n명)' 의 n 을 실제 인원으로 바꿉니다.
+    # 글자가 run 여러 개로 쪼개져 있어("(", "총 ", "n", "명", ")") run 하나만
+    # 봐서는 못 찾습니다. 문단 전체를 이어 붙여 바꾸고 첫 run 에 되돌립니다.
+    for para in t.rows[2].cells[0].paragraphs:
+        whole = "".join(r.text for r in para.runs)
+        if "n" in whole and "명" in whole:
+            _put_text(para, whole.replace("n", str(인원)))
 
-    doc.add_paragraph()
-    본문제목 = doc.add_paragraph()
-    _set_font(본문제목.add_run("회의내용"), 12, bold=True)
+    _put_bullets(t.rows[4].cells[1], m.bullets or ["-"])
 
-    if m.bullets:
-        for b in m.bullets:
-            para = doc.add_paragraph(style="List Bullet")
-            _set_font(para.add_run(b), 11)
-    else:
-        para = doc.add_paragraph()
-        _set_font(para.add_run("-"), 11)
+    # 요청 및 예정 사항 — 따로 받는 칸이 없어 비워 둡니다(손으로 적습니다).
+    _put(t.rows[5].cells[1], "")
 
-    # 사진은 본문 뒤에 붙입니다. 원본 비율을 지키려고 너비만 정하고
-    # 높이는 비워 둡니다 — python-docx 가 비율에 맞춰 계산합니다.
+    # 사진은 표 뒤에 붙입니다. 원본 비율을 지키려고 너비만 정합니다.
     photos = [photo_dir / ph.stored_name for ph in m.photos]
     photos = [f for f in photos if f.exists()]
     if photos:
         doc.add_paragraph()
-        사진제목 = doc.add_paragraph()
-        _set_font(사진제목.add_run("회의 사진"), 12, bold=True)
         for f in photos:
             para = doc.add_paragraph()
-            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             try:
                 para.add_run().add_picture(str(f), width=PHOTO_MAX_W)
             except Exception:      # noqa: BLE001
                 # 사진 하나가 깨졌다고 문서 전체를 못 만들면 곤란합니다.
-                _set_font(para.add_run(f"(사진을 넣지 못했습니다: {f.name})"), 10)
+                para.add_run(f"(사진을 넣지 못했습니다: {f.name})")
 
     buf = io.BytesIO()
     doc.save(buf)
