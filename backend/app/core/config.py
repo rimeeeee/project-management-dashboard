@@ -40,6 +40,10 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173"
 
+    # 회의록 AI 초안(Google Gemini). 비워 두면 그 기능만 꺼지고
+    # 회의록은 손으로 써서 그대로 씁니다.
+    gemini_api_key: str = ""
+
 
     # 기관 게시판(인재원·진흥원·의료정보원)을 며칠 전 게시물까지 가져올지.
     # 공고는 연 단위 사업 주기라 '작년 이맘때 공고'를 찾는 일이 있어 1년으로 둡니다.
