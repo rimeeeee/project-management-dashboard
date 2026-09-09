@@ -442,7 +442,7 @@ export default function Meetings({ projectId, onModal }: Props) {
             <div className="mt-bullets-head">
               <b>회의 사진</b>
               <span className="hint">
-                {photos.length + pending.length}장 · 문서 뒤에 붙습니다
+                {photos.length + pending.length}장
                 {pending.length > 0 && " (저장할 때 함께 올라갑니다)"}
               </span>
             </div>
@@ -459,7 +459,7 @@ export default function Meetings({ projectId, onModal }: Props) {
                        if (e.target.files?.length) void 사진올리기(e.target.files);
                        e.target.value = "";
                      }} />
-              <label htmlFor="mtPhoto">여기에 끌어다 놓거나 눌러서 고릅니다</label>
+              <label htmlFor="mtPhoto">사진 등록</label>
             </div>
 
             {(photos.length > 0 || pending.length > 0) && (

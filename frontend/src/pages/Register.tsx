@@ -263,7 +263,6 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
               </div>
             ))}
           </div>
-          <p className="hint" style={{ marginTop: 6 }}>과제는 진행 순서대로 적습니다.</p>
           <button type="button" className="btn-add"
                   onClick={() => setTasks([...tasks,
                     { name: "", stage: tasks.length ? tasks[tasks.length - 1].stage : 1 }])}>

@@ -262,6 +262,15 @@ export default function InputPanel({
                         const next = spends.filter((_, j) => j !== i);
                         setSpends(next.length ? next : [{ amt: "", cat: "", on: "" }]);  // 최소 한 줄은 남깁니다
                       }}>×</button>
+              {(() => {
+                const 선택세목 = r.cat || catOptions[0] || "";
+                const 산출근거 = p.categories.find((c) => c.name === 선택세목)?.basis?.trim();
+                return 산출근거 ? (
+                  <div className="sp-basis" title={산출근거}>
+                    <span>산출 근거</span>{산출근거}
+                  </div>
+                ) : null;
+              })()}
             </div>
           ))}
         </div>
