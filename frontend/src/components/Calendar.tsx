@@ -199,7 +199,9 @@ export default function Calendar({
   // 범례 — 띠 색이 어느 사업인지 알려 줍니다
   const 본이름 = new Set<string>();
   const 띠범례: CalRun[] = [];
-  runs.forEach((r) => {
+  const 월첫날 = isoOf(new Date(연, 월, 1));
+  const 월끝날 = isoOf(new Date(연, 월 + 1, 0));
+  runs.filter((r) => !(r.to < 월첫날 || r.from > 월끝날)).forEach((r) => {
     if (본이름.has(r.name)) return;
     본이름.add(r.name);
     띠범례.push(r);

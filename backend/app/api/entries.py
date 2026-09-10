@@ -76,6 +76,8 @@ class EntryIn(BaseModel):
     plan: str = ""
     # 화면이 보고 있던 회차 번호. 0 이면 '아직 없는 회차'로 알고 있다는 뜻입니다.
     baseVersion: int = 0
+    # 기존 입력의 날짜를 다른 보고 기간으로 옮길 때 원래 회차를 찾는 키입니다.
+    originalPeriodKey: str = ""
 
 
 @router.put("/entries/{period_key}")
@@ -86,18 +88,33 @@ def save_entry(
     p: Project = Depends(get_project),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    # 회차 키가 이 사업의 것인지 확인합니다.
-    # 목록에 없는 오래된 회차도 허용해야 하므로, 키에서 날짜를 되짚어 확인합니다.
-    target = None
-    for per in period_list(p.cycle, p.start, today(), 60):
-        if per.key == period_key:
-            target = per
-            break
-    if target is None:
+    # 새 화면은 선택한 보고 날짜를 보내고, 예전 화면과 기존 데이터는 회차 키를 보냅니다.
+    # 날짜에는 과거 제한을 두지 않습니다. 내부에서는 기존처럼 보고 주기별 키를 사용합니다.
+    try:
+        report_date = date.fromisoformat(period_key)
+    except ValueError:
+        target = next(
+            (per for per in period_list(p.cycle, p.start, today(), 60)
+             if per.key == period_key),
+            None,
+        )
         existing = next((e for e in p.entries if e.period_key == period_key), None)
-        if existing is None:
-            raise HTTPException(status_code=400, detail="이 사업의 회차가 아닙니다.")
-        target = period_of(p.cycle, p.start, existing.entry_date)
+        if target is None and existing is None:
+            raise HTTPException(status_code=400, detail="이 사업의 보고 기간이 아닙니다.")
+        save_key = period_key
+        report_date = existing.entry_date if existing is not None else target.start
+    else:
+        target = period_of(p.cycle, p.start, report_date)
+        save_key = target.key
+
+    original_key = body.originalPeriodKey.strip() or None
+    if original_key and original_key != save_key:
+        destination = next((e for e in p.entries if e.period_key == save_key), None)
+        if destination is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="선택한 보고 기간에 이미 입력이 있습니다. 기존 입력을 먼저 확인하세요.",
+            )
 
     for s in body.spends:
         if s.amt < 0:
@@ -119,7 +136,9 @@ def save_entry(
         issue=body.issue.strip(), plan=body.plan.strip(),
     )
     try:
-        entry = svc.save_entry(db, p, period_key, target.start, data, body.baseVersion)
+        entry = svc.save_entry(
+            db, p, save_key, report_date, data, body.baseVersion, original_key,
+        )
     except svc.SaveConflict as c:
         response.status_code = 409
         return c.payload()

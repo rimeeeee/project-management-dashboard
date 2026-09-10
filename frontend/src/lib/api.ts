@@ -156,6 +156,7 @@ export interface SaveEntryBody {
   issue: string;
   plan: string;
   baseVersion: number;
+  originalPeriodKey?: string;
 }
 
 export interface ProjectInput {

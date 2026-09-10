@@ -40,9 +40,12 @@ class SaveConflict(Exception):
     def payload(self) -> dict[str, Any]:
         per = period_of(self.project.cycle, self.project.start, self.entry.entry_date)
         if self.kind == "exists":
-            msg = f"{per.label} 회차는 이미 입력되어 있습니다."
+            # 날짜로 저장하지만 같은 보고 기간에는 보고를 1건만 둡니다.
+            # 그래서 '어느 날짜로 이미 들어가 있는지'를 함께 알려 줍니다.
+            날 = self.entry.entry_date.isoformat().replace("-", ".")
+            msg = f"{날} 보고가 이미 있습니다 ({per.label})."
         else:
-            msg = "이 회차는 방금 다른 분이 저장했습니다."
+            msg = "이 보고는 방금 다른 분이 저장했습니다."
         return {
             "kind": self.kind,
             "message": msg,
@@ -111,15 +114,17 @@ def save_entry(
     entry_date: date,
     data: EntryInput,
     base_version: int,
+    original_period_key: str | None = None,
 ) -> ReportEntry:
     """
     base_version
       0    — 화면은 '이 회차는 아직 없다'고 알고 있음
       N>0  — 화면이 N 번째 내용을 보고 고치는 중
     """
+    lookup_key = original_period_key or period_key
     existing = (
         db.query(ReportEntry)
-        .filter(ReportEntry.project_id == p.id, ReportEntry.period_key == period_key)
+        .filter(ReportEntry.project_id == p.id, ReportEntry.period_key == lookup_key)
         .one_or_none()
     )
 
@@ -148,12 +153,14 @@ def save_entry(
         EntryRevision(
             entry_id=existing.id,
             project_id=p.id,
-            period_key=period_key,
-            revision_no=_next_revision_no(db, p.id, period_key),
+            period_key=lookup_key,
+            revision_no=_next_revision_no(db, p.id, lookup_key),
             action="update",
             snapshot=_snapshot(p, existing),
         )
     )
+    existing.period_key = period_key
+    existing.entry_date = entry_date
     _apply(db, existing, data)
     existing.version += 1
     db.commit()

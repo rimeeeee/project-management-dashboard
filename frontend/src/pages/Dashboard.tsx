@@ -57,8 +57,8 @@ export default function Dashboard({
   function deleteEntry(pkey: string) {
     const e = p.entries.find((x) => x.periodKey === pkey);
     if (!e) return;
-    onModal("이 회차 입력을 삭제할까요?",
-      e.periodLabel + " · 집행액과 성과 실적이 함께 제외됩니다.",
+    onModal("이 보고 입력을 삭제할까요?",
+      dots(e.date) + " · 집행액과 성과 실적이 함께 제외됩니다.",
       () => void run(async () => {
         const r = await api.deleteEntry(p.id, pkey);
         if (editingKey === pkey) setEditingKey(null);
@@ -131,7 +131,7 @@ export default function Dashboard({
         </button>
       </div>
       <div className="a"><b>조치</b> {e.plan || "미입력"}</div>
-      <div className="d">{e.periodFull}{e.issueDone ? " · 해결됨" : ""}</div>
+      <div className="d">{dots(e.date)}{e.issueDone ? " · 해결됨" : ""}</div>
     </div>
   );
 
@@ -154,7 +154,7 @@ export default function Dashboard({
           <button type="button" className={"btn-toggle" + (inputOpen ? " on" : "")} id="inputToggle"
                   aria-pressed={inputOpen}
                   onClick={() => { setInputOpen(!inputOpen); if (inputOpen) setEditingKey(null); }}>
-            <span className="sw" aria-hidden="true" /><span id="toggleLbl">{p.cycleWord} 입력</span>
+            <span className="sw" aria-hidden="true" /><span id="toggleLbl">보고 입력</span>
           </button>
         </div>
       </div>
@@ -462,10 +462,10 @@ export default function Dashboard({
           </div>
 
           <div className="card span2">
-            <h2>입력 내역 <span className="hint" id="histHint">{p.cycleWord} 보고 · 총 {p.entries.length}건</span></h2>
+            <h2>입력 내역 <span className="hint" id="histHint">총 {p.entries.length}건</span></h2>
             <div className="tbl-wrap"><table className="tbl">
               <thead><tr>
-                <th style={{ width: 215 }}>회차</th>
+                <th style={{ width: 215 }}>보고 날짜</th>
                 <th className="num" style={{ width: 135 }}>집행액 (원)</th>
                 <th style={{ width: 135 }}>비목</th>
                 <th>활동 요약</th>
@@ -475,7 +475,7 @@ export default function Dashboard({
               <tbody id="histBody">
                 {p.entries.length ? p.entries.slice().reverse().map((e) => (
                   <tr key={e.periodKey}>
-                    <td>{e.periodFull}</td>
+                    <td>{dots(e.date)}</td>
                     <td className="num">{fmtWon(e.spendTotal)}</td>
                     <td title={e.spends.map((s) => `${s.cat} ${s.amt}`).join(", ")}>{e.catSummary}</td>
                     <td className="act">{e.act || "-"}</td>
@@ -492,7 +492,7 @@ export default function Dashboard({
                     </div></td>
                   </tr>
                 )) : (
-                  <tr><td colSpan={6}><div className="empty">입력된 회차가 없습니다.</div></td></tr>
+                  <tr><td colSpan={6}><div className="empty">입력 내역이 없습니다.</div></td></tr>
                 )}
               </tbody>
             </table></div>

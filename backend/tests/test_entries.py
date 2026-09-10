@@ -32,6 +32,59 @@ def test_새_회차를_저장한다(client):
     assert e["act"] == "첫 입력"
 
 
+def test_보고_날짜를_직접_선택해_저장한다(client):
+    r = client.put(
+        f"{P}/entries/2026-06-03",
+        json=body(
+            act="날짜로 입력",
+            spends=[{"cat": "인건비", "amt": 1_000_000, "on": ""}],
+        ),
+    )
+
+    assert r.status_code == 200, r.text
+    e = r.json()["entry"]
+    assert e["periodKey"] == "W2026-06-01"
+    assert e["date"] == "2026-06-03"
+    assert e["spends"][0]["on"] == "2026-06-03"
+
+
+def test_같은_보고_기간의_다른_날짜는_기존_입력으로_알린다(client):
+    client.put(f"{P}/entries/2026-06-03", json=body(act="먼저"))
+    r = client.put(f"{P}/entries/2026-06-05", json=body(act="나중"))
+
+    assert r.status_code == 409
+    info = r.json()
+    assert info["kind"] == "exists"
+    # 어느 날짜로 이미 들어가 있는지 알려 줍니다
+    assert "2026.06.03" in info["message"]
+
+
+def test_같은_기간에_덮어쓰면_보고_날짜가_새_날짜로_바뀐다(client):
+    first = client.put(f"{P}/entries/2026-06-03", json=body(act="먼저")).json()["entry"]
+    r = client.put(f"{P}/entries/2026-06-05",
+                   json=body(act="나중", baseVersion=first["version"]))
+
+    assert r.status_code == 200, r.text
+    e = r.json()["entry"]
+    assert e["date"] == "2026-06-05"
+    assert e["act"] == "나중"
+    assert len([x for x in client.get(P).json()["entries"]
+                if x["periodKey"] == "W2026-06-01"]) == 1
+
+
+def test_수정할_때_달력에서_다른_보고_기간으로_옮긴다(client):
+    first = client.put(f"{P}/entries/2026-06-03", json=body(act="먼저")).json()["entry"]
+    payload = body(act="날짜 변경", baseVersion=first["version"])
+    payload["originalPeriodKey"] = first["periodKey"]
+
+    r = client.put(f"{P}/entries/2026-06-10", json=payload)
+
+    assert r.status_code == 200, r.text
+    e = r.json()["entry"]
+    assert e["periodKey"] == "W2026-06-08"
+    assert e["date"] == "2026-06-10"
+
+
 # ---------------------------------------------------------------- 회차별 저장
 def test_한_회차를_저장해도_다른_회차는_그대로다(client):
     client.put(f"{P}/entries/{OTHER}",

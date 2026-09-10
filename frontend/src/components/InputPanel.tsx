@@ -9,8 +9,8 @@
    않아도 바로 반영됩니다. 회차에 딸린 값이 아니라 사업 자체의 값이기 때문입니다. */
 import { useEffect, useMemo, useState } from "react";
 import { api, ConflictError, type SaveEntryBody } from "../lib/api";
-import { fmtWon } from "../lib/format";
-import type { Entry, PeriodOption, ProjectDetail } from "../lib/types";
+import { dots, fmtWon, todayISO } from "../lib/format";
+import type { Entry, ProjectDetail } from "../lib/types";
 
 interface SpendRow {
   amt: string;
@@ -39,8 +39,7 @@ const commas = (s: string) => (s === "" ? "" : Number(s).toLocaleString("ko-KR")
 export default function InputPanel({
   p, editingKey, onEditingKeyChange, onSaved, onConflict,
 }: Props) {
-  const [periods, setPeriods] = useState<PeriodOption[]>([]);
-  const [selected, setSelected] = useState("");
+  const [reportDate, setReportDate] = useState(todayISO);
   const [spends, setSpends] = useState<SpendRow[]>([{ amt: "", cat: "", on: "" }]);
   const [kpi, setKpi] = useState<Record<string, string>>({});
   const [act, setAct] = useState("");
@@ -58,35 +57,27 @@ export default function InputPanel({
     return list;
   }, [p.categories, spends]);
 
-  useEffect(() => {
-    let alive = true;
-    api.periods(p.id).then((list) => {
-      if (!alive) return;
-      setPeriods(list);
-      setSelected((cur) => (editingKey ?? (cur && list.some((o) => o.key === cur) ? cur : list[0]?.key ?? "")));
-    }).catch(() => {});
-    return () => { alive = false; };
-  }, [p.id, p.entries.length, editingKey]);
-
-  // 수정 모드로 들어오면 그 회차 내용을 폼에 채웁니다
-  const target = editing ? editingKey! : selected;
+  // 저장 경로에는 사용자가 달력에서 고른 날짜를 보냅니다.
+  const target = reportDate;
   const cur: Entry | undefined = editing
     ? p.entries.find((e) => e.periodKey === editingKey)
     : undefined;
 
   useEffect(() => {
     if (cur) {
+      setReportDate(cur.date);
       setSpends(cur.spends.length
         ? cur.spends.map((s) => ({ amt: commas(String(s.amt)), cat: s.cat, on: s.on }))
         : [{ amt: "", cat: "", on: "" }]);
       setKpi(Object.fromEntries(p.kpis.map((k) => [k.name, String(cur.kpi[k.name] ?? "")])));
       setAct(cur.act); setIssue(cur.issue); setPlan(cur.plan);
     } else {
+      setReportDate(todayISO());
       setSpends([{ amt: "", cat: "", on: "" }]);
       setKpi({}); setAct(""); setIssue(""); setPlan("");
     }
     setErr("");
-  }, [editingKey, cur?.version]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [p.id, editingKey, cur?.version]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const sum = useMemo(() => {
     let total = 0, bad = false;
@@ -131,18 +122,22 @@ export default function InputPanel({
     }
     setErr("");
 
-    const known = periods.find((o) => o.key === target);
     return {
       spends: rows, kpi: kpiVals,
       act: act.trim(), issue: issue.trim(), plan: plan.trim(),
-      // 수정 중이면 지금 보고 있는 회차의 번호, 신규면 0
-      baseVersion: editing ? (cur?.version ?? 0) : (known?.hasEntry ? 0 : 0),
+      // 수정 중이면 지금 보고 있는 입력의 번호, 신규면 0
+      baseVersion: editing ? (cur?.version ?? 0) : 0,
+      originalPeriodKey: editing ? editingKey! : undefined,
     };
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
+    if (!reportDate) {
+      setErr("보고 날짜를 선택하세요.");
+      return;
+    }
     const payload = collect();
     if (!payload) return;
 
@@ -153,7 +148,7 @@ export default function InputPanel({
         const b = r.project;
         onSaved(b, "저장되었습니다",
           b.rate > 100 ? "집행 누계가 총 사업비를 초과했습니다."
-                       : (periods.find((o) => o.key === target)?.label ?? ""));
+                       : dots(reportDate));
         onEditingKeyChange(null);
       } catch (ex) {
         if (ex instanceof ConflictError) {
@@ -178,23 +173,17 @@ export default function InputPanel({
   return (
     <form className="panel" id="weeklyForm" autoComplete="off" onSubmit={submit}>
       <h2>
-        <span id="panelTitle">{p.cycleWord} 입력</span>{" "}
+        <span id="panelTitle">보고 입력</span>{" "}
         <span className={"badge" + (editing ? " edit" : "")} id="wkModeBadge">
           {editing ? "수정" : "신규"}
         </span>
       </h2>
 
       <div className="sec">
-        <div className="cap">보고 회차</div>
-        <select id="wkPeriod" aria-label="보고 회차 선택" value={target} disabled={editing}
-                onChange={(e) => setSelected(e.target.value)}>
-          {periods.map((o) => (
-            <option key={o.key} value={o.key}>{o.full}{o.hasEntry ? " · 입력됨" : ""}</option>
-          ))}
-          {editing && !periods.some((o) => o.key === editingKey) && (
-            <option value={editingKey!}>{cur?.periodFull}</option>
-          )}
-        </select>
+        <div className="cap">보고 날짜</div>
+        <input id="wkPeriod" type="date" aria-label="보고 날짜 선택"
+               value={reportDate}
+               onChange={(e) => setReportDate(e.target.value)} />
       </div>
 
       <div className="sec">
@@ -237,9 +226,7 @@ export default function InputPanel({
       </div>
 
       <div className="sec">
-        <div className="cap">3 · 집행액
-          <span className="hint">지출일을 비우면 회차 날짜로 잡힙니다</span>
-        </div>
+        <div className="cap">3 · 집행액</div>
         <div id="wkSpends">
           {spends.map((r, i) => (
             <div key={i} className="spend-row">
@@ -251,10 +238,9 @@ export default function InputPanel({
                         j === i ? { ...x, cat: e.target.value } : x))}>
                 {catOptions.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              {/* 안 적으면 회차 날짜로 갑니다. 매번 적게 하면 번거롭고,
-                  대개는 회차 안에서 쓴 돈이라 그 편이 맞습니다. */}
+              {/* 안 적으면 보고 날짜로 갑니다. */}
               <input type="date" className="sp-on" value={r.on} aria-label="지출일"
-                     title="지출일 — 비우면 회차 날짜로 잡힙니다"
+                     title="지출일 — 비우면 보고 날짜로 잡힙니다"
                      onChange={(e) => setSpends(spends.map((x, j) =>
                        j === i ? { ...x, on: e.target.value } : x))} />
               <button type="button" className="rm" aria-label="집행 항목 삭제"
@@ -277,8 +263,8 @@ export default function InputPanel({
         <button type="button" className="btn-add"
                 onClick={() => setSpends([...spends, { amt: "", cat: "", on: "" }])}>+ 집행 항목 추가</button>
         <div className="spend-sum" id="wkSpendSum">
-          {sum.bad ? <>회차 합계 <b>—</b></>
-                   : <>회차 합계 <b>{fmtWon(sum.total)}</b> 원</>}
+          {sum.bad ? <>입력 합계 <b>—</b></>
+                   : <>입력 합계 <b>{fmtWon(sum.total)}</b> 원</>}
         </div>
       </div>
 
@@ -297,7 +283,7 @@ export default function InputPanel({
                 {k.name}{" "}
                 <small style={{ color: "var(--muted)" }}>(누계 {k.value.toLocaleString()}{k.unit})</small>
               </span>
-              <input type="text" inputMode="decimal" placeholder="회차 실적"
+              <input type="text" inputMode="decimal" placeholder="보고 실적"
                      value={kpi[k.name] ?? ""}
                      onChange={(e) => setKpi({ ...kpi, [k.name]: e.target.value })} />
             </div>
