@@ -103,7 +103,7 @@ export default function Home({ projects, details, onGo, onZoom }: Props) {
         <div className="tile">
           {ic(<><path d="M3 7h18v13H3z"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></>)}
           <div className="k">진행 중 사업</div>
-          <div className="v">{projects.length}건</div>
+          <div className="v">{진행중.length}건</div>
         </div>
         <div className="tile">
           {ic(<><path d="M3 6h18v12H3z"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></>)}
