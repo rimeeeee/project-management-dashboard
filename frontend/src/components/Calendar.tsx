@@ -94,8 +94,7 @@ export default function Calendar({
   /* 이 화면에 걸치는 사업만 골라 사업마다 고정된 줄(레인)을 줍니다.
      그래야 주가 바뀌어도 같은 사업이 늘 같은 높이에 놓입니다. */
   const 레인 = runs
-    .filter((r) => !(r.to < 화면첫날 || r.from > 화면끝날))
-    .slice(0, 6);   // 너무 많으면 칸이 길어지므로 6개까지만
+    .filter((r) => !(r.to < 화면첫날 || r.from > 화면끝날));
 
   const 주들 = [];
   for (let w = 0; w < 6; w++) {

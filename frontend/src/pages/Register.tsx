@@ -246,7 +246,7 @@ export default function Register({ editing, prefill, onSaved, onDeleted, onCance
           <button type="button" className="btn-add"
                   onClick={() => setKpis([...kpis, { name: "", target: "", unit: "" }])}>+ 지표 추가</button>
           <div className="f" style={{ marginTop: 12 }}>
-            <span className="help">실적은 회차마다 발생한 값만 입력하면 자동으로 합산되어 달성률에 반영됩니다.</span>
+            <span className="help">실적은 보고마다 발생한 값만 입력하면 자동으로 합산되어 달성률에 반영됩니다.</span>
           </div>
         </div>
 

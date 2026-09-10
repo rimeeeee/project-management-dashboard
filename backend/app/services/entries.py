@@ -148,13 +148,24 @@ def save_entry(
     if existing.version != base_version:
         raise SaveConflict("exists" if base_version == 0 else "conflict", existing, p)
 
+    # 보고 날짜가 다른 기간으로 옮겨지면 이 입력에 딸린 과거 이력도 새 키로 모읍니다.
+    # 스냅샷 안에는 이동 전 날짜와 회차 키가 남으므로 원래 내용은 잃지 않습니다.
+    history_key = period_key
+    if lookup_key != period_key:
+        (
+            db.query(EntryRevision)
+            .filter(EntryRevision.entry_id == existing.id)
+            .update({EntryRevision.period_key: period_key}, synchronize_session=False)
+        )
+        db.flush()
+
     # 고치기 전 내용을 이력으로 남깁니다
     db.add(
         EntryRevision(
             entry_id=existing.id,
             project_id=p.id,
-            period_key=lookup_key,
-            revision_no=_next_revision_no(db, p.id, lookup_key),
+            period_key=history_key,
+            revision_no=_next_revision_no(db, p.id, history_key),
             action="update",
             snapshot=_snapshot(p, existing),
         )

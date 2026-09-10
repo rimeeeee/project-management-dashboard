@@ -84,6 +84,28 @@ def test_수정할_때_달력에서_다른_보고_기간으로_옮긴다(client)
     assert e["periodKey"] == "W2026-06-08"
     assert e["date"] == "2026-06-10"
 
+    history = client.get(f"{P}/entries/W2026-06-08/history").json()
+    assert len(history) == 1
+    assert history[0]["snapshot"]["date"] == "2026-06-03"
+
+
+def test_여러번_수정한_보고를_옮겨도_이력이_한곳에_남는다(client):
+    first = client.put(f"{P}/entries/2026-06-03", json=body(act="처음")).json()["entry"]
+    second = client.put(
+        f"{P}/entries/2026-06-04",
+        json=body(act="두번째", baseVersion=first["version"],
+                  originalPeriodKey=first["periodKey"]),
+    ).json()["entry"]
+    moved = client.put(
+        f"{P}/entries/2026-06-10",
+        json=body(act="옮김", baseVersion=second["version"],
+                  originalPeriodKey=second["periodKey"]),
+    ).json()["entry"]
+
+    history = client.get(f"{P}/entries/{moved['periodKey']}/history").json()
+    assert [row["revisionNo"] for row in history] == [2, 1]
+    assert [row["snapshot"]["act"] for row in history] == ["두번째", "처음"]
+
 
 # ---------------------------------------------------------------- 회차별 저장
 def test_한_회차를_저장해도_다른_회차는_그대로다(client):

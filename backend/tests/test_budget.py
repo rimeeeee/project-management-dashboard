@@ -210,3 +210,16 @@ def test_월_목록은_사업_시작_달부터_이어진다(client):
     assert "2026-07" in 달                      # 안 쓴 달도 빠지지 않습니다
     assert 달 == sorted(달)
     assert len(달) == len(set(달))
+
+
+def test_사업기간_밖의_지출도_월별_합계에서_빠지지_않는다(client):
+    d = 사업(client)
+    d = 넣기(client, d["id"], "W2026-06-01", [
+        {"cat": "연구수당", "amt": 100_000, "on": "2026-05-20"},
+        {"cat": "연구수당", "amt": 200_000, "on": "2027-06-02"},
+    ])
+
+    m = d["monthly"]
+    assert m["totals"]["2026-05"] == 100_000
+    assert m["totals"]["2027-06"] == 200_000
+    assert m["grand"] == d["spent"] == 300_000

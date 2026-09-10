@@ -9,7 +9,7 @@
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Any
 
 from app.core import calc
@@ -27,8 +27,10 @@ def dday(end: date, at: datetime | None = None) -> dict[str, str]:
     프로토타입 ddayText() — 종료일 23:59:59 까지 남은 날수를 올림합니다.
     """
     at = at or calc.now()
-    end_dt = datetime.combine(end, datetime.max.time().replace(microsecond=0), tzinfo=KST)
-    days = -((at - end_dt) // timedelta(days=1))   # JS Math.ceil 과 같게
+    # 종료일은 그날 전체를 포함하고, 한국 날짜가 다음 날이 되는 즉시 종료입니다.
+    # 시각 차이를 24시간 단위로 내림하면 다음 날에도 D-day로 남는 문제가 생깁니다.
+    local_date = at.astimezone(KST).date() if at.tzinfo else at.date()
+    days = (end - local_date).days
     if days < 0:
         return {"txt": "종료", "cls": "closed"}
     if days == 0:
@@ -208,8 +210,9 @@ def _monthly(p: Project, entries) -> dict[str, Any]:
     """
     월별 × 세목 집행액.
 
-    달은 사업 시작 달부터 '이번 달' 과 '마지막 지출이 있는 달' 중 늦은
-    쪽까지 이어서 냅니다. 사업 끝나는 달을 넘기지는 않습니다.
+    기본적으로 사업 시작 달부터 이번 달 또는 사업 종료 달까지 이어서 냅니다.
+    다만 사업 기간 밖에 기록된 지출이 있으면 그 달도 포함해 집행 총액이
+    월별 표에서 빠지지 않게 합니다.
     아직 오지 않은 달을 스무 칸씩 늘어놓아 봐야 읽기만 어렵습니다.
     중간에 안 쓴 달은 0 으로 남겨 둡니다 — 빈 달도 알아야 할 사실입니다.
     """
@@ -225,21 +228,19 @@ def _monthly(p: Project, entries) -> dict[str, Any]:
         return {"months": [], "rows": [], "totals": {}, "grand": 0}
 
     오늘 = calc.today()
-    끝 = _month(p.end) if p.end else _month(오늘)
-    마지막 = max([_month(오늘), *지출달]) if 지출달 else _month(오늘)
-    마지막 = min(마지막, 끝)
+    시작달 = _month(p.start)
+    종료달 = _month(p.end) if p.end else _month(오늘)
+    기본마지막 = max(시작달, min(_month(오늘), 종료달))
+    처음 = min([시작달, *지출달]) if 지출달 else 시작달
+    마지막 = max([기본마지막, *지출달]) if 지출달 else 기본마지막
 
     달들: list[str] = []
-    해, 월 = p.start.year, p.start.month
-    while f"{해:04d}-{월:02d}" <= 마지막 and len(달들) < 60:
+    해, 월 = (int(x) for x in 처음.split("-"))
+    while f"{해:04d}-{월:02d}" <= 마지막:
         달들.append(f"{해:04d}-{월:02d}")
         월 += 1
         if 월 > 12:
             해, 월 = 해 + 1, 1
-    # 사업이 아직 시작 전이면 시작 달 하나만 둡니다(표가 비면 뜻이 없습니다).
-    if not 달들:
-        달들 = [_month(p.start)]
-
     행 = []
     for r in _cat_rows(p, entries):
         이름 = r["name"]
