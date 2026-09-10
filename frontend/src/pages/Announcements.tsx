@@ -326,7 +326,7 @@ export default function Announcements({
                   <td className="cellsub">
                     {a.due
                       ? <>{dots(a.openFrom)}<br />~ {dots(a.due)} {a.dueTime}</>
-                      : <span style={{ color: "var(--muted)" }}>미확인</span>}
+                      : <span style={{ color: "var(--muted)" }}>접수기관에서 확인</span>}
                   </td>
                   <td className="num cellnum">{a.amount ? fmtMoney(a.amount) : "-"}</td>
                   <td>
@@ -349,7 +349,7 @@ export default function Announcements({
         </div>
       )}
 
-      <div className="ann-grid" id="annGrid" hidden={view === "list"}>
+      {view === "card" && <div className="ann-grid" id="annGrid">
         {data?.items.length ? data.items.map((a) => (
           <article key={a.id} className="ann">
             <div className="top">
@@ -396,7 +396,7 @@ export default function Announcements({
           // 공고가 없다는 안내는 위 건수 줄에 이미 있습니다. 여기서 또 적지 않습니다.
           !data && <div className="empty">불러오는 중입니다.</div>
         )}
-      </div>
+      </div>}
 
       {data && <Pager page={data.page} pages={data.pages} onGo={goPage} />}
     </section>
