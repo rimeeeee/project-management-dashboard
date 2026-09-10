@@ -1,0 +1,24 @@
+/* Noto Sans KR — 작은 표·버튼에서도 한글 획이 또렷하게 보이도록 적용합니다.
+   글꼴 파일을 저장소에 함께 두어 내부망에서도 같은 모양을 유지합니다. */
+@font-face{
+  font-family:"Noto Sans KR";
+  src:local("Noto Sans KR"),url("/fonts/NotoSansKR-VF.ttf") format("truetype");
+  font-style:normal;
+  font-weight:100 900;
+  font-display:swap;
+}
+
+body{
+  font-family:"Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+}
+
+/* 작은 안내와 표 보조문구는 글꼴을 바꾸면 행간이 조밀해 보일 수 있어
+   줄높이를 명시합니다. 칸이 좁아 두 줄이 되어도 서로 겹치지 않습니다. */
+.hint,
+.cellsub,
+.nav-label,
+.cat-head,
+.mo-detail-row,
+.mt-item-sub{
+  line-height:1.55;
+}

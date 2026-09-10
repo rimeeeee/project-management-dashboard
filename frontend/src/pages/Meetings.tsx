@@ -284,13 +284,18 @@ export default function Meetings({ projectId, onModal }: Props) {
               <div className="f">
                 {/* 끝나는 시각은 안 적어도 됩니다. 언제 끝났는지 모르는 채로
                     적는 일이 흔한데, 억지로 채우게 하면 없는 숫자를 지어냅니다. */}
-                <label htmlFor="mtStart">시간 <span className="hint">종료는 비워 둬도 됩니다</span></label>
                 <div className="mt-time">
-                  <input id="mtStart" type="time" value={v.metStart}
-                         onChange={(e) => setV({ ...v, metStart: e.target.value })} />
-                  <span aria-hidden="true">~</span>
-                  <input id="mtEnd" type="time" value={v.metEnd} aria-label="종료 시각"
-                         onChange={(e) => setV({ ...v, metEnd: e.target.value })} />
+                  <label className="mt-time-field" htmlFor="mtStart">
+                    <span>시작시간</span>
+                    <input id="mtStart" type="time" value={v.metStart}
+                           onChange={(e) => setV({ ...v, metStart: e.target.value })} />
+                  </label>
+                  <span className="mt-time-sep" aria-hidden="true">~</span>
+                  <label className="mt-time-field" htmlFor="mtEnd">
+                    <span>종료시간</span>
+                    <input id="mtEnd" type="time" value={v.metEnd}
+                           onChange={(e) => setV({ ...v, metEnd: e.target.value })} />
+                  </label>
                 </div>
               </div>
             </div>

@@ -106,9 +106,6 @@ export default function Reviews({ onToProject, onModal, reloadToken }: Props) {
             </button>
           ))}
         </div>
-        <span className="hint">
-          공고 화면에서 [검토 목록에 넣기] 를 누르면 여기로 들어옵니다
-        </span>
       </div>
 
       {err && <div className="err on">{err}</div>}
