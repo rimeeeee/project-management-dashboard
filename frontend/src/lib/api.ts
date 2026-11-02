@@ -1,5 +1,10 @@
 /* 서버와 주고받는 부분.
-   세션 쿠키를 써야 하므로 credentials:"include" 가 반드시 필요합니다. */
+   세션 쿠키를 써야 하므로 credentials:"include" 가 반드시 필요합니다.
+
+   API 가 다른 포트에 있을 수 있어 주소는 apiUrl() 로 감쌉니다.
+   한 포트로 쓸 때는 아무것도 붙지 않습니다 — ./apiBase.ts 참고. */
+
+import { apiUrl } from "./apiBase";
 
 export class ApiError extends Error {
   status: number;
@@ -32,7 +37,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // 서버가 본문을 읽지 못합니다(422). 실제로 그렇게 한 번 깨졌습니다.
   const { headers: extra, ...rest } = init ?? {};
   try {
-    res = await fetch(path, {
+    res = await fetch(apiUrl(path), {
       credentials: "include",
       ...rest,
       headers: { "Content-Type": "application/json", ...(extra as Record<string, string>) },

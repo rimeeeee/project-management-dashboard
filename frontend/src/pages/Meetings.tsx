@@ -7,6 +7,7 @@
    사람이 고쳐서 저장을 눌러야 남습니다. */
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "../lib/api";
+import { apiUrl } from "../lib/apiBase";
 import { dots, fmtMoney, fmtWon } from "../lib/format";
 import { meetingApi, type Meeting, type MeetingIn, type MeetingPhoto } from "../lib/meetingApi";
 import { todayISO } from "../lib/format";
@@ -471,7 +472,7 @@ export default function Meetings({ projectId, onModal }: Props) {
               <div className="mt-thumbs">
                 {photos.map((ph) => (
                   <div key={ph.id} className="mt-thumb">
-                    <img src={ph.url} alt={ph.name} />
+                    <img src={apiUrl(ph.url)} alt={ph.name} />
                     <button type="button" aria-label="사진 빼기"
                             onClick={() => void 사진지우기(ph)}>×</button>
                   </div>

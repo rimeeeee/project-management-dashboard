@@ -1,6 +1,7 @@
 /* 회의록 — 사업비 지출 증빙(감사·정산)에 쓰는 문서.
    사업에 매달려 있어서 주소도 사업 아래로 들어갑니다. */
 import { request } from "./api";
+import { apiUrl } from "./apiBase";
 
 export interface MeetingPhoto {
   id: number;
@@ -81,7 +82,7 @@ export const meetingApi = {
   async uploadPhoto(pid: string, id: number, file: File): Promise<MeetingPhoto> {
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch(`${base(pid)}/${id}/photos`, {
+    const res = await fetch(apiUrl(`${base(pid)}/${id}/photos`), {
       method: "POST", credentials: "include", body: fd,
     });
     if (!res.ok) {
@@ -94,5 +95,7 @@ export const meetingApi = {
   removePhoto: (pid: string, id: number, photoId: number) =>
     request<void>(`${base(pid)}/${id}/photos/${photoId}`, { method: "DELETE" }),
 
-  docxUrl: (pid: string, id: number) => `${base(pid)}/${id}/docx`,
+  /* <a href> 로 쓰이므로 절대 주소여야 합니다. 상대 주소로 두면
+     API 가 다른 포트에 있을 때 화면 포트로 가서 404 가 납니다. */
+  docxUrl: (pid: string, id: number) => apiUrl(`${base(pid)}/${id}/docx`),
 };

@@ -40,6 +40,15 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173"
 
+    # 이 프로세스가 맡을 역할.
+    #   all  — 화면과 API 를 한 포트에서 모두 내보냅니다 (개발 PC · 한 포트 운영)
+    #   api  — API 만. frontend/dist 를 서빙하지 않습니다
+    #   web  — 화면(frontend/dist)만. API 와 데이터베이스를 쓰지 않습니다
+    #
+    # 프론트와 백엔드를 다른 포트로 나눌 때 web·api 를 각각 한 프로세스씩
+    # 띄웁니다. 둘은 같은 코드·같은 .env 를 쓰고 역할만 다릅니다.
+    role: str = "all"
+
     # 공고를 걸러 낼 낱말. 제목·사업명에 하나라도 들어 있어야 저장합니다.
     # 기관 게시판은 우리와 상관없는 공고까지 다 올라와서, 그대로 받으면
     # 정작 볼 것이 묻힙니다. 비워 두면 걸러 내지 않고 모두 받습니다.
@@ -74,6 +83,14 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @property
+    def serves_api(self) -> bool:
+        return self.role in ("all", "api")
+
+    @property
+    def serves_web(self) -> bool:
+        return self.role in ("all", "web")
+
+    @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")
 
@@ -85,6 +102,9 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     s = Settings()
+    # 오타가 나면 화면도 API 도 없는 서버가 조용히 떠서 원인을 찾기 어렵습니다.
+    if s.role not in ("all", "api", "web"):
+        raise ValueError(f"ROLE 은 all · api · web 중 하나여야 합니다 (지금: {s.role!r})")
     # SQLite 파일은 경로를 절대경로로 바꿔 둡니다.
     # 그냥 두면 서버를 어느 폴더에서 켰느냐에 따라 다른 파일을 보게 되어,
     # "어제 넣은 데이터가 사라졌다" 처럼 보이는 일이 생깁니다.
