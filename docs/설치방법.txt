@@ -74,13 +74,13 @@
   ※ 개발 PC 에서 시험만 할 때는 이 단계를 건너뛰세요.
     .env 를 그대로 두면 SQLite 파일로 돌아갑니다.
 
-  1) PostgreSQL 16 을 설치합니다. 설치본이 Windows 서비스로
+  1) PostgreSQL 17 을 설치합니다. 설치본이 Windows 서비스로
      자동 등록되므로 재부팅 후에도 알아서 켜집니다.
 
   2) 이 프로그램이 쓸 계정과 데이터베이스를 만듭니다.
 
      아래 psql·pg_dump 명령은 PostgreSQL 의 bin 폴더에 있습니다.
-     경로째 쓰거나(예: "C:\Program Files\PostgreSQL\16\bin\psql.exe"),
+     경로째 쓰거나(예: "C:\Program Files\PostgreSQL\17\bin\psql.exe"),
      그 폴더를 PATH 에 넣어 두면 이름만으로 쓸 수 있습니다.
      pgAdmin 을 쓰면 명령 없이 화면에서 만들 수도 있습니다.
 
@@ -89,25 +89,25 @@
 
   3) .env 의 DATABASE_URL 을 아래처럼 바꿉니다.
 
-         DATABASE_URL=postgresql+psycopg://bizdash:정한비밀번호@localhost:5432/bizdash
+         DATABASE_URL=postgresql+psycopg://bizdash:정한비밀번호@localhost:5433/bizdash
 
   4) 바깥에서 데이터베이스에 직접 붙지 못하게 막아 둡니다.
 
-     설치 직후에는 listen_addresses 가 '*' 라서 5432 포트가
+     설치 직후에는 listen_addresses 가 '*' 라서 5433 포트가
      네트워크 쪽으로 열려 있습니다. 확인해 보세요.
 
-         netstat -ano | findstr ":5432"
+         netstat -ano | findstr ":5433"
 
-     0.0.0.0:5432 로 나오면 열려 있는 것입니다.
+     0.0.0.0:5433 로 나오면 열려 있는 것입니다.
      postgresql.conf 를 열어 아래처럼 고치고 서비스를 다시 시작합니다.
-     (C:\Program Files\PostgreSQL\16\data\postgresql.conf)
+     (C:\bizdash\db\data\postgresql.conf)
 
          listen_addresses = 'localhost'
 
      관리자 명령 창에서:
 
-         net stop postgresql-x64-16
-         net start postgresql-x64-16
+         net stop postgresql-bizdash
+         net start postgresql-bizdash
 
      ※ pg_hba.conf 가 기본으로 127.0.0.1 만 허용하므로 이대로 두어도
        바깥에서 붙지는 못합니다. 그래도 포트를 아예 열어 두지 않는
@@ -314,24 +314,24 @@
 
        내용 (형식: 호스트:포트:DB:계정:비밀번호):
 
-           localhost:5432:bizdash:bizdash:정한비밀번호
+           localhost:5433:bizdash:bizdash:정한비밀번호
 
      (나) backup.bat 을 만들고 작업 스케줄러에 매일 등록
 
-       아래를 C:\bizdash\backup.bat 으로 저장합니다.
+       아래를 C:\bizdash\app\backup.bat 으로 저장합니다.
        (경로·저장 위치는 실제 환경에 맞게)
 
            @echo off
            set D=%date:~0,4%-%date:~5,2%-%date:~8,2%
-           "C:\Program Files\PostgreSQL\16\bin\pg_dump.exe" ^
-             -U bizdash -h localhost -w -Fc bizdash > "C:\backup\bizdash_%D%.dump"
+           "C:\Program Files\PostgreSQL\17\bin\pg_dump.exe" ^
+             -U bizdash -h localhost -p 5433 -w -Fc bizdash > "C:\bizdash\backup\bizdash_%D%.dump"
 
        -w 는 '비밀번호를 묻지 말라' 는 뜻입니다. (가) 의 pgpass 를 씁니다.
-       저장 폴더(C:\backup)는 미리 만들어 두세요.
+       저장 폴더(C:\bizdash\backup)는 미리 만들어 두세요.
 
        관리자 명령 창에서 매일 새벽 3시에 돌도록 등록합니다.
 
-           schtasks /create /tn "bizdash 백업" /tr "C:\bizdash\backup.bat" ^
+           schtasks /create /tn "bizdash 백업" /tr "C:\bizdash\app\backup.bat" ^
              /sc daily /st 03:00 /ru SYSTEM
 
        등록됐는지 확인 · 지금 바로 한 번 실행해 보기:
@@ -339,7 +339,7 @@
            schtasks /query /tn "bizdash 백업"
            schtasks /run   /tn "bizdash 백업"
 
-       실행 후 C:\backup 에 .dump 파일이 생기면 정상입니다.
+       실행 후 C:\bizdash\backup 에 .dump 파일이 생기면 정상입니다.
 
      ※ 받아만 두고 끝내지 마세요. 처음 한 번은 실제로 복구해 보고
        자료가 살아나는지 확인해야 진짜 백업입니다.
@@ -353,7 +353,7 @@
 
        backup.bat 에 아래 한 줄을 더해 두면 함께 받아집니다.
 
-           robocopy "C:\bizdash\app\data\uploads" "C:\backup\uploads" /MIR /NFL /NDL /NJH /NJS
+           robocopy "C:\bizdash\app\data\uploads" "C:\bizdash\backup\uploads" /MIR /NFL /NDL /NJH /NJS
 
        /MIR 은 지워진 사진까지 맞춰 지웁니다. 그것이 싫으면 /E 로 바꾸세요.
 
@@ -620,7 +620,7 @@
 
   1) 먼저 백업합니다. 되돌릴 곳이 있어야 마음 놓고 올립니다.
 
-         pg_dump -U bizdash -Fc bizdash > C:\backup\update전_2026-09-01.dump
+         pg_dump -U bizdash -h localhost -p 5433 -w -Fc bizdash > C:\bizdash\backup\update전_2026-09-01.dump
 
   2) 서비스를 멈춥니다.
 
